@@ -9,7 +9,7 @@
   <link rel="icon" href="icon-192.png?v=22" sizes="192x192" type="image/png" />
   <link rel="icon" href="icon-512.png?v=22" sizes="512x512" type="image/png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=22" />
-  <link rel="stylesheet" href="styles.css?v=24" />
+  <link rel="stylesheet" href="styles.css?v=25" />
   <title>Common Ground</title>
 </head>
 <body>
@@ -31,10 +31,15 @@
         <span class="eyebrow">Blind dating, but thoughtful.</span>
         <h1>Meet the person before the picture.</h1>
         <p>Common Ground matches people using relationship goals, lifestyle, personality, interests, and approximate location — then explains why the match makes sense.</p>
-        <div class="hero-actions">
-          <button id="homeProfileBtn" class="primary" data-nav="onboarding">Build my profile</button>
-          <button id="homeMatchesBtn" class="secondary" data-nav="matches">See demo matches</button>
-          <button id="homeAuthBtn" class="ghost" data-nav="auth">Sign in / Create account</button>
+        <div id="homeLoggedOutActions" class="hero-actions">
+          <button class="primary" data-nav="onboarding">Build my profile</button>
+          <button class="secondary" data-nav="matches">See demo matches</button>
+          <button class="ghost" data-nav="auth">Sign in / Create account</button>
+        </div>
+        <div id="homeLoggedInActions" class="hero-actions hidden">
+          <button class="primary" data-nav="onboarding">My profile</button>
+          <button class="secondary" data-nav="matches">See my matches</button>
+          <button class="ghost" data-nav="accountSettings">Account settings</button>
         </div>
       </div>
 
@@ -62,6 +67,43 @@
           </form>
           <div class="auth-note">Common Ground uses Supabase authentication. Your password is handled by Supabase and is not stored in the app code.</div>
         </div>
+      </div>
+    </section>
+
+    <section id="accountSettings" class="screen">
+      <div class="section-head">
+        <div><span class="eyebrow">Account</span><h2>Your Common Ground account</h2><p class="muted">Manage your login, profile, verification, and safety settings.</p></div>
+      </div>
+      <div class="account-grid">
+        <article class="card account-card">
+          <span class="eyebrow">Signed in as</span>
+          <h3 id="accountEmail">—</h3>
+          <p class="muted">Your email is used for sign-in and account recovery. It is not shown to matches.</p>
+        </article>
+        <article class="card account-card">
+          <span class="eyebrow">Dating profile</span>
+          <h3>Edit your profile</h3>
+          <p class="muted">Update your age preferences, interests, lifestyle choices, personality answers, and bio.</p>
+          <button class="primary" data-nav="onboarding">Edit profile</button>
+        </article>
+        <article class="card account-card">
+          <span class="eyebrow">Verification</span>
+          <h3>Name &amp; age verification</h3>
+          <p id="accountVerificationText" class="muted">Optional. Verified members receive a badge after an approved verification check.</p>
+          <button class="secondary" data-nav="onboarding">Go to verification</button>
+        </article>
+        <article class="card account-card">
+          <span class="eyebrow">Safety &amp; privacy</span>
+          <h3>Controls</h3>
+          <p class="muted">Blocking, reporting, privacy controls, and account deletion will live here as we connect the real multi-user features.</p>
+          <button class="secondary" data-nav="about">About &amp; safety</button>
+        </article>
+        <article class="card account-card danger-card">
+          <span class="eyebrow">Session</span>
+          <h3>Sign out</h3>
+          <p class="muted">Sign out of Common Ground on this device.</p>
+          <button id="accountSignOutBtn" class="secondary" type="button">Sign out</button>
+        </article>
       </div>
     </section>
 
@@ -217,8 +259,8 @@
     </nav>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=24"></script>
-  <!-- Common Ground real accounts build v23 -->
+  <script src="app.js?v=25"></script>
+  <!-- Common Ground real accounts build v25 -->
   <script>
     // Development build: remove older service workers/caches so GitHub Pages updates immediately.
     if ('serviceWorker' in navigator) {

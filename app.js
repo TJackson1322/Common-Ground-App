@@ -65,6 +65,7 @@ function bindNav(){
   $$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
 }
 function showScreen(id){
+  if(id==='accountSettings' && !currentUser) id='auth';
   $$('.screen').forEach(s=>s.classList.remove('active'));
   $(`#${id}`).classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
@@ -142,10 +143,11 @@ function setAuthMessage(message,type=''){
   const el=$('#authMessage');if(!el)return;el.textContent=message;el.className=`auth-message ${type}`.trim();
 }
 function bindAuth(){
-  const form=$('#authForm'),signUp=$('#signUpBtn'),account=$('#accountBtn'),signOut=$('#signOutBtn');
+  const form=$('#authForm'),signUp=$('#signUpBtn'),account=$('#accountBtn'),signOut=$('#signOutBtn'),accountSignOut=$('#accountSignOutBtn');
   if(form)form.addEventListener('submit',async e=>{e.preventDefault();await signInUser();});
   if(signUp)signUp.addEventListener('click',signUpUser);
-  if(account)account.addEventListener('click',()=>showScreen('auth'));
+  if(account)account.addEventListener('click',()=>showScreen(currentUser?'accountSettings':'auth'));
+  if(accountSignOut)accountSignOut.addEventListener('click',signOutUser);
   if(signOut)signOut.addEventListener('click',signOutUser);
 }
 async function initSupabase(){
@@ -165,25 +167,28 @@ async function initSupabase(){
 }
 function updateAuthUI(){
   const status=$('#authStatus'),account=$('#accountBtn'),signOut=$('#signOutBtn');
-  const hero=$('#home .hero-actions');
-  const heroBtns=hero ? [...hero.querySelectorAll('button')] : [];
-  const homeProfile=$('#homeProfileBtn') || heroBtns.find(b=>b.dataset.nav==='onboarding') || heroBtns[0];
-  const homeMatches=$('#homeMatchesBtn') || heroBtns.find(b=>b.dataset.nav==='matches') || heroBtns[1];
-  const homeAuth=$('#homeAuthBtn') || heroBtns.find(b=>b.dataset.nav==='auth') || heroBtns[2];
+  const loggedOut=$('#homeLoggedOutActions'),loggedIn=$('#homeLoggedInActions');
+  const accountEmail=$('#accountEmail');
+  const verificationText=$('#accountVerificationText');
   if(currentUser){
     if(status)status.textContent=currentUser.email||'Signed in';
     if(account){account.textContent='Account';account.classList.add('signed-in');}
-    if(signOut)signOut.classList.remove('hidden');
-    if(homeAuth){homeAuth.textContent='Account settings';homeAuth.dataset.nav='auth';}
-    if(homeProfile){homeProfile.textContent=localStorage.getItem('cg_profile')?'My profile':'Build my profile';homeProfile.dataset.nav='onboarding';}
-    if(homeMatches){homeMatches.textContent='See my matches';homeMatches.dataset.nav='matches';}
+    // Keep the top bar clean: Sign out lives inside Account settings.
+    if(signOut)signOut.classList.add('hidden');
+    if(loggedOut)loggedOut.classList.add('hidden');
+    if(loggedIn)loggedIn.classList.remove('hidden');
+    if(accountEmail)accountEmail.textContent=currentUser.email||'Signed in';
+    const p=localStorage.getItem('cg_profile');
+    if(verificationText && p){
+      try{verificationText.textContent=JSON.parse(p).verifiedNameAge?'Name & age verified.':'Optional. Your name and age are not verified yet.';}catch(_e){}
+    }
   }else{
     if(status)status.textContent='Demo mode';
     if(account){account.textContent='Sign in';account.classList.remove('signed-in');}
     if(signOut)signOut.classList.add('hidden');
-    if(homeAuth){homeAuth.textContent='Sign in / Create account';homeAuth.dataset.nav='auth';}
-    if(homeProfile){homeProfile.textContent='Build my profile';homeProfile.dataset.nav='onboarding';}
-    if(homeMatches){homeMatches.textContent='See demo matches';homeMatches.dataset.nav='matches';}
+    if(loggedOut)loggedOut.classList.remove('hidden');
+    if(loggedIn)loggedIn.classList.add('hidden');
+    if(accountEmail)accountEmail.textContent='Not signed in';
   }
 }
 async function signUpUser(){
