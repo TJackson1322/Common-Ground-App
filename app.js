@@ -233,6 +233,12 @@ function profileToDb(p,userId){
     smoking:p.nicotine||null,
     vaping:p.vaping||null,
     cannabis:p.cannabis||null,
+    alcohol_free:p.alcoholFree||null,
+    deal_goal:!!p.deals?.goal,
+    deal_smoking:!!p.deals?.smoking,
+    deal_vaping:!!p.deals?.vaping,
+    deal_alcohol:!!p.deals?.alcohol,
+    deal_cannabis:!!p.deals?.cannabis,
     date_drinker:p.dateDrinker||null,
     date_smoker:p.dateSmoker||null,
     date_vaper:p.dateVaper||null,
@@ -251,10 +257,10 @@ function dbToProfile(r){
   return {
     name:r.first_name||'',age:r.age||18,area:r.area||'',radius:r.dating_radius||25,minAge:r.min_age||18,maxAge:r.max_age||99,
     goal:r.relationship_goal||'Long-term relationship',bio:r.bio||'',conflict:r.conflict_style||'Take some space, then talk',social:r.social_energy||'Balanced',planning:r.planning_style||'Plan the important things',children:r.children_preference||'I am open either way',
-    alcohol:r.alcohol||'Never',nicotine:r.smoking||'Never',vaping:r.vaping||'Never',cannabis:r.cannabis||'Never',dateDrinker:r.date_drinker||'Sometimes / depends',dateSmoker:r.date_smoker||'Sometimes / depends',dateVaper:r.date_vaper||'Sometimes / depends',dateCannabis:r.date_cannabis||'Sometimes / depends',dateSober:r.date_sober||'No preference',
+    alcohol:r.alcohol||'Never',nicotine:r.smoking||'Never',vaping:r.vaping||'Never',cannabis:r.cannabis||'Never',alcoholFree:r.alcohol_free||'No preference',dateDrinker:r.date_drinker||'Sometimes / depends',dateSmoker:r.date_smoker||'Sometimes / depends',dateVaper:r.date_vaper||'Sometimes / depends',dateCannabis:r.date_cannabis||'Sometimes / depends',dateSober:r.date_sober||'No preference',
     interests:r.interests||[],verifiedNameAge:!!r.name_age_verified,
     personality:{openness:r.openness??50,conscientiousness:r.conscientiousness??50,extraversion:r.extraversion??50,agreeableness:r.agreeableness??50,emotionalStability:r.emotional_stability??50},
-    deals:{goal:true,smoking:false,vaping:false,alcohol:false,cannabis:false}
+    deals:{goal:r.deal_goal??true,smoking:!!r.deal_smoking,vaping:!!r.deal_vaping,alcohol:!!r.deal_alcohol,cannabis:!!r.deal_cannabis}
   };
 }
 async function loadProfileFromSupabase(){
@@ -275,6 +281,7 @@ function getUserProfile(){
 function hardConflict(u,m){
   const minAge=Number(u.minAge??18),maxAge=Number(u.maxAge??99);
   if(Number(m.age)<minAge || Number(m.age)>maxAge) return `Outside your preferred age range (${minAge}–${maxAge})`;
+  if(m.realUser && Number(u.age) && (Number(u.age)<Number(m.minAge??18) || Number(u.age)>Number(m.maxAge??99))) return 'You are outside this person’s preferred age range';
   if(u.deals?.goal && !goalCompatible(u.goal,m.goal)) return 'Different relationship goals';
   if(u.deals?.smoking && m.nicotine==='Regularly') return 'Regular cigarette smoking is one of your deal-breakers';
   if(u.deals?.vaping && (m.vaping??'Never')==='Regularly') return 'Regular vaping is one of your deal-breakers';
@@ -298,7 +305,7 @@ function calcMatch(u,m){
   const lifestyle=lifestyleScore(u,m);
   const personality=personalityScore(u,m);
   const hobby=interestScore(u,m);
-  const distance=Math.max(0,100-(m.distance/Math.max(u.radius||25,10))*45);
+  const distance=Number.isFinite(Number(m.distance)) && m.distance!==null ? Math.max(0,100-(Number(m.distance)/Math.max(u.radius||25,10))*45) : ((u.area&&m.area&&u.area.trim().toLowerCase()===m.area.trim().toLowerCase())?100:70);
   const total=Math.round(goal*.30+lifestyle*.25+personality*.20+hobby*.15+distance*.10);
   return {blocked:false,score:Math.min(99,total),parts:{Goals:Math.round(goal),Lifestyle:Math.round(lifestyle),Personality:Math.round(personality),Interests:Math.round(hobby),Distance:Math.round(distance)}};
 }
@@ -328,7 +335,8 @@ function reasons(u,m,result){
   if(u.social===m.social)r.push('Your social-energy preferences are similar.');
   if(u.children===m.children)r.push('You are in a similar place regarding children.');
   if(m.alcohol==='Sober / in recovery' && ['Never','Sober / in recovery'].includes(u.alcohol))r.push('Your alcohol-free lifestyles align.');
-  if(m.distance<=(u.radius||25))r.push(`They are about ${m.distance} miles away — inside your preferred radius.`);
+  if(Number.isFinite(Number(m.distance)) && m.distance!==null && Number(m.distance)<=(u.radius||25))r.push(`They are about ${m.distance} miles away — inside your preferred radius.`);
+  else if(u.area&&m.area&&u.area.trim().toLowerCase()===m.area.trim().toLowerCase())r.push('You listed the same general area.');
   if(r.length<3)r.push('Your overall personality profiles have a compatible balance.');
   return r.slice(0,5);
 }
@@ -521,3 +529,150 @@ function registerPwa(){
 }
 
 document.addEventListener('DOMContentLoaded',init);
+
+
+// ===== v26: real Supabase matching =====
+let realCandidateProfiles=[];
+let realLikes=new Set();
+let realPasses=new Set();
+let realMatchPartnerIds=new Set();
+let realMatchRows=[];
+let matchingLoadPromise=null;
+
+function dbRowToCandidate(r){
+  const p=dbToProfile(r);
+  return {...p,id:r.id,name:r.first_name||'Member',realUser:true,distance:null,verifiedNameAge:!!r.name_age_verified};
+}
+
+async function loadRealMatchingData(force=false){
+  if(!supabaseClient||!currentUser)return;
+  if(matchingLoadPromise&&!force)return matchingLoadPromise;
+  matchingLoadPromise=(async()=>{
+    const [profilesRes,likesRes,passesRes,matchesRes]=await Promise.all([
+      supabaseClient.from('profiles').select('*').neq('id',currentUser.id),
+      supabaseClient.from('likes').select('to_user').eq('from_user',currentUser.id),
+      supabaseClient.from('passes').select('to_user').eq('from_user',currentUser.id),
+      supabaseClient.from('matches').select('*').or(`user_one.eq.${currentUser.id},user_two.eq.${currentUser.id}`)
+    ]);
+    const firstErr=profilesRes.error||likesRes.error||passesRes.error||matchesRes.error;
+    if(firstErr){
+      console.error('Real matching load failed',firstErr);
+      throw firstErr;
+    }
+    realCandidateProfiles=(profilesRes.data||[]).map(dbRowToCandidate);
+    realLikes=new Set((likesRes.data||[]).map(x=>x.to_user));
+    realPasses=new Set((passesRes.data||[]).map(x=>x.to_user));
+    realMatchRows=matchesRes.data||[];
+    realMatchPartnerIds=new Set(realMatchRows.map(m=>m.user_one===currentUser.id?m.user_two:m.user_one));
+  })().finally(()=>{matchingLoadPromise=null;});
+  return matchingLoadPromise;
+}
+
+function candidateAreaText(m){return m.area?escapeHTML(m.area):'General area not listed'}
+
+async function renderMatches(){
+  const list=$('#matchList');
+  if(!list)return;
+  const u=getUserProfile();
+  const personalized=!!localStorage.getItem('cg_profile');
+
+  if(!currentUser){
+    $('#matchIntro').textContent=personalized?`Demo matches for ${u.name}, ages ${u.minAge??18}–${u.maxAge??99}. Sign in to see real members.`:'Complete your profile for personalized demo results, then sign in to see real members.';
+    const scored=demoProfiles.map(m=>({m,r:calcMatch(u,m)})).filter(x=>!x.r.blocked).sort((a,b)=>b.r.score-a.r.score);
+    list.innerHTML=scored.map(({m,r})=>`<article class="card match-card"><div class="match-score">${r.score}%</div><div class="avatar">${m.name[0]}</div><h3>${m.name}${verificationBadge(m,true)}, ${m.age}</h3>${verificationLine(m)}<div class="muted">${m.area} · demo profile</div><div class="tag-row"><span class="tag">${m.goal}</span><span class="tag">${m.social}</span></div><button class="primary" data-demo-detail="${m.id}">Why you two?</button></article>`).join('');
+    $$('[data-demo-detail]').forEach(b=>b.addEventListener('click',()=>showDemoDetail(Number(b.dataset.demoDetail))));
+    return;
+  }
+
+  if(!personalized){
+    $('#matchIntro').textContent='Finish your profile first so Common Ground can calculate meaningful compatibility.';
+    list.innerHTML='<div class="card mini"><h3>Finish your profile</h3><p class="muted">Your age preferences, relationship goal, lifestyle, personality and interests are used before real profiles are shown.</p><button class="primary" data-nav="onboarding">Build my profile</button></div>';
+    $$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
+    return;
+  }
+
+  $('#matchIntro').textContent=`Real members for ${u.name}, ages ${u.minAge??18}–${u.maxAge??99}, ranked by compatibility.`;
+  list.innerHTML='<div class="card mini"><strong>Finding real members…</strong><p class="muted">Applying your age range and lifestyle preferences.</p></div>';
+  try{await loadRealMatchingData(true)}catch(err){
+    list.innerHTML=`<div class="card mini"><h3>Real matching needs one Supabase update</h3><p class="muted">${escapeHTML(err.message||'Could not load matching data.')}</p><p class="muted">Run the <strong>SUPABASE-v26.sql</strong> file included in this build, then refresh.</p></div>`;
+    return;
+  }
+
+  const eligible=realCandidateProfiles
+    .filter(m=>!realPasses.has(m.id))
+    .map(m=>({m,r:calcMatch(u,m)}))
+    .filter(x=>!x.r.blocked)
+    .sort((a,b)=>b.r.score-a.r.score);
+
+  if(!eligible.length){
+    const total=realCandidateProfiles.length;
+    list.innerHTML=`<div class="card mini"><h3>${total?'No new compatible profiles right now':'You’re ready for your first tester.'}</h3><p class="muted">${total?'Everyone currently registered is outside your preferences, already passed, or otherwise filtered.':'Your account is real, but another person needs to create and save a profile before a real match can appear.'}</p></div>`;
+    return;
+  }
+
+  list.innerHTML=eligible.map(({m,r})=>{
+    const isMatched=realMatchPartnerIds.has(m.id), liked=realLikes.has(m.id);
+    return `<article class="card match-card"><div class="match-score">${r.score}%</div><div class="avatar">${escapeHTML((m.name||'?')[0])}</div><h3>${escapeHTML(m.name)}${verificationBadge(m,true)}, ${m.age}</h3>${verificationLine(m)}<div class="muted">${candidateAreaText(m)}</div><div class="tag-row"><span class="tag">${escapeHTML(m.goal)}</span><span class="tag">${escapeHTML(m.social)}</span><span class="tag">${escapeHTML(m.alcohol)}</span></div><ul class="why-list">${reasons(u,m,r).slice(0,3).map(x=>`<li>${escapeHTML(x)}</li>`).join('')}</ul><button class="primary" data-real-detail="${m.id}">${isMatched?'Mutual match ✓':liked?'Liked ✓':'Why you two?'}</button></article>`;
+  }).join('');
+  $$('[data-real-detail]').forEach(b=>b.addEventListener('click',()=>showDetail(b.dataset.realDetail)));
+}
+
+function showDemoDetail(id){
+  const u=getUserProfile(),m=demoProfiles.find(x=>x.id===id),r=calcMatch(u,m);if(!m||r.blocked)return;
+  const shared=m.interests.filter(i=>(u.interests||[]).includes(i));
+  const date=suggestDate(u,m,shared);
+  $('#matchDetailContent').innerHTML=`<div class="detail-grid"><article class="card detail-card"><span class="eyebrow">Demo compatibility</span><div class="score-big">${r.score}%</div><h2>${m.name}, ${m.age}</h2><p class="muted">${m.area}</p><p>${m.bio}</p><div class="match-actions"><button class="primary" data-nav="auth">Sign in for real matching</button><button class="secondary" data-nav="matches">Back</button></div></article><article class="card detail-card"><span class="eyebrow">Why you two?</span><ul class="why-list">${reasons(u,m,r).map(x=>`<li>${x}</li>`).join('')}</ul></article></div><article class="date-box" style="margin-top:18px"><span class="eyebrow" style="color:#d7bf8c">Suggested first date</span><h2>${date.title}</h2><p>${date.text}</p><strong>${date.cost}</strong></article>`;
+  showScreen('matchDetail');
+  $$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
+}
+
+async function showDetail(id){
+  if(!currentUser){showDemoDetail(Number(id));return;}
+  if(!realCandidateProfiles.length)await loadRealMatchingData();
+  const u=getUserProfile(),m=realCandidateProfiles.find(x=>x.id===id);if(!m)return;
+  const r=calcMatch(u,m);if(r.blocked)return;
+  const shared=m.interests.filter(i=>(u.interests||[]).includes(i));
+  const date=suggestDate(u,m,shared);
+  const isMatched=realMatchPartnerIds.has(m.id),liked=realLikes.has(m.id);
+  const actionHtml=isMatched
+    ? `<div class="match-success"><strong>Mutual match ✓</strong><p>You both liked each other. Real-time chat is the next connection step.</p></div>`
+    : liked
+      ? `<div class="match-success"><strong>Like sent ✓</strong><p>If ${escapeHTML(m.name)} likes you too, Common Ground will create a mutual match.</p></div><button class="secondary" data-pass-user="${m.id}">Pass instead</button>`
+      : `<button class="primary" data-like-user="${m.id}">♡ Like</button><button class="secondary" data-pass-user="${m.id}">Pass</button>`;
+  $('#matchDetailContent').innerHTML=`<div class="detail-grid"><article class="card detail-card"><span class="eyebrow">Real compatibility</span><div class="score-big">${r.score}%</div><h2>${escapeHTML(m.name)}${verificationBadge(m)}, ${m.age}</h2>${verificationLine(m)}<p class="muted">${candidateAreaText(m)}</p><p>${escapeHTML(m.bio||'')}</p><div class="tag-row">${(m.interests||[]).slice(0,6).map(i=>`<span class="tag">${escapeHTML(i)}</span>`).join('')}</div><div class="match-actions">${actionHtml}<button class="ghost" data-nav="matches">Back to matches</button></div></article><article class="card detail-card"><span class="eyebrow">Why you two?</span><h2>There’s real overlap here.</h2><ul class="why-list">${reasons(u,m,r).map(x=>`<li>${escapeHTML(x)}</li>`).join('')}</ul><div class="compat-bars">${Object.entries(r.parts).map(([k,v])=>`<div class="bar-row"><span>${k}</span><div class="bar"><span style="width:${v}%"></span></div><strong>${v}</strong></div>`).join('')}</div></article></div><div class="detail-grid" style="margin-top:18px"><article class="card detail-card"><span class="eyebrow">Lifestyle snapshot</span><h3>${escapeHTML(m.alcohol)}</h3><p>${escapeHTML(m.alcohol)} alcohol · ${escapeHTML(m.nicotine)} cigarettes · ${escapeHTML(m.vaping??'Never')} vaping · ${escapeHTML(m.cannabis)} cannabis</p></article><article class="date-box"><span class="eyebrow" style="color:#d7bf8c">Suggested first date</span><h2>${date.title}</h2><p>${date.text}</p><strong>${date.cost}</strong></article></div>`;
+  showScreen('matchDetail');
+  $$('[data-like-user]').forEach(b=>b.addEventListener('click',()=>likeRealUser(b.dataset.likeUser)));
+  $$('[data-pass-user]').forEach(b=>b.addEventListener('click',()=>passRealUser(b.dataset.passUser)));
+  $$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
+}
+
+async function likeRealUser(targetId){
+  if(!supabaseClient||!currentUser)return showScreen('auth');
+  const {data,error}=await supabaseClient.rpc('like_user',{target_user:targetId});
+  if(error){console.error(error);showToast(`Like failed: ${error.message}. Run SUPABASE-v26.sql if you have not yet.`);return;}
+  const result=Array.isArray(data)?data[0]:data;
+  await loadRealMatchingData(true);
+  if(result?.matched)showToast('It’s a mutual match! ✓');else showToast('Like sent.');
+  await showDetail(targetId);
+}
+
+async function passRealUser(targetId){
+  if(!supabaseClient||!currentUser)return showScreen('auth');
+  const {error}=await supabaseClient.rpc('pass_user',{target_user:targetId});
+  if(error){console.error(error);showToast(`Pass failed: ${error.message}. Run SUPABASE-v26.sql if you have not yet.`);return;}
+  showToast('Passed. That profile will be hidden.');
+  await loadRealMatchingData(true);
+  showScreen('matches');
+}
+
+async function renderConversations(){
+  const wrap=$('#conversationList');if(!wrap)return;
+  if(!currentUser){
+    wrap.innerHTML='<div class="card empty-messages"><h3>Sign in for real messages</h3><p class="muted">Real conversations will unlock after a mutual match.</p><button class="primary" data-nav="auth">Sign in</button></div>';
+    $$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));return;
+  }
+  try{await loadRealMatchingData(true)}catch(e){wrap.innerHTML='<div class="card empty-messages"><h3>Matching setup needed</h3><p class="muted">Run SUPABASE-v26.sql first.</p></div>';return;}
+  if(!realMatchPartnerIds.size){wrap.innerHTML='<div class="card empty-messages"><h3>No mutual matches yet</h3><p class="muted">When you and another real member like each other, the match will appear here. Real-time chat comes next.</p><button class="primary" data-nav="matches">Browse real matches</button></div>';$$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));return;}
+  const partners=realCandidateProfiles.filter(p=>realMatchPartnerIds.has(p.id));
+  wrap.innerHTML=partners.map(p=>`<article class="card conversation-card"><div class="avatar small">${escapeHTML((p.name||'?')[0])}</div><div class="conversation-copy"><strong>${escapeHTML(p.name)}${verificationBadge(p,true)}</strong><span>Mutual match ✓</span><small>Real-time chat connection is the next build.</small></div><button class="secondary" disabled>Matched</button></article>`).join('');
+}

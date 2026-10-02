@@ -1,39 +1,14 @@
-# Common Ground — working prototype
+# Common Ground v26
 
-Common Ground is a mobile-friendly, installable PWA prototype for compatibility-first blind dating.
+This build adds real Supabase profile discovery, Like / Pass, and mutual matching.
 
-## Included
-- 18+ onboarding
-- approximate area and dating radius
-- Big Five-style personality sliders
-- communication / social / planning / children preferences
-- alcohol, nicotine/cigarettes, cannabis, and sobriety fields
-- dating-partner preferences for those lifestyle choices
-- hard deal-breakers before scoring
-- interests and short bio
-- weighted compatibility score
-- "Why you two?" explanation
-- alcohol-free date logic for anyone under 21 in this U.S.-focused prototype
-- offline-capable PWA install support
-- browser localStorage so no database account is required for this first version
+## Before uploading v26 to GitHub
+1. Open Supabase > SQL Editor.
+2. Paste and run `SUPABASE-v26.sql` once.
+3. Confirm Success.
+4. Upload the app files to GitHub Pages.
+5. Open the live site with `?v=26`.
 
-## Run locally
-From the project folder:
+Signed-in users see real Supabase profiles only. Signed-out users can still see demo profiles. A mutual match is created only when both real users Like each other.
 
-```bash
-python3 -m http.server 8080
-```
-
-Then open http://localhost:8080 in a browser.
-
-## Publish free
-This static app can be hosted on GitHub Pages, Cloudflare Pages, Netlify, or similar static hosting. No paid backend is required for this demo.
-
-## Production work still needed before public dating use
-A real public dating service should add secure sign-in, server-side database, encrypted data handling, profile deletion/export, age/identity verification, moderation, reporting/blocking, abuse prevention, rate limiting, photo controls, privacy policy/terms, and legal review. Do not expose exact location.
-
-The matching score is a compatibility heuristic, not a psychological diagnosis or guarantee of relationship success.
-
-
-## v23 development note
-Service worker caching is disabled during active development so GitHub Pages updates are visible immediately.
+Real-time text/voice chat is the next build; this version shows mutual matches in Messages but does not yet send cross-device messages.
