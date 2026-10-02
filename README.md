@@ -33,3 +33,7 @@ This static app can be hosted on GitHub Pages, Cloudflare Pages, Netlify, or sim
 A real public dating service should add secure sign-in, server-side database, encrypted data handling, profile deletion/export, age/identity verification, moderation, reporting/blocking, abuse prevention, rate limiting, photo controls, privacy policy/terms, and legal review. Do not expose exact location.
 
 The matching score is a compatibility heuristic, not a psychological diagnosis or guarantee of relationship success.
+
+
+## v23 development note
+Service worker caching is disabled during active development so GitHub Pages updates are visible immediately.

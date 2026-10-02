@@ -41,7 +41,7 @@ async function init(){
   seedDemoConversations();
   bindNav();
   bindForm();
-  registerPwa();
+  // Service worker caching disabled during active development to avoid stale builds.
   bindChat();
   bindAuth();
   await initSupabase();
@@ -155,10 +155,10 @@ async function initSupabase(){
   if(error)console.error(error);
   currentSession=data?.session||null;currentUser=currentSession?.user||null;
   updateAuthUI();
-  if(currentUser)await loadProfileFromSupabase();
+  if(currentUser){await loadProfileFromSupabase();updateAuthUI();}
   supabaseClient.auth.onAuthStateChange(async(_event,session)=>{
     currentSession=session||null;currentUser=session?.user||null;updateAuthUI();
-    if(currentUser)await loadProfileFromSupabase();
+    if(currentUser){await loadProfileFromSupabase();updateAuthUI();}
   });
 }
 function updateAuthUI(){

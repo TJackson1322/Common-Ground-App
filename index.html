@@ -9,7 +9,7 @@
   <link rel="icon" href="icon-192.png?v=22" sizes="192x192" type="image/png" />
   <link rel="icon" href="icon-512.png?v=22" sizes="512x512" type="image/png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=22" />
-  <link rel="stylesheet" href="styles.css?v=22" />
+  <link rel="stylesheet" href="styles.css?v=23" />
   <title>Common Ground</title>
 </head>
 <body>
@@ -217,7 +217,16 @@
     </nav>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=21"></script>
-  <!-- Common Ground real accounts build v22 -->
+  <script src="app.js?v=23"></script>
+  <!-- Common Ground real accounts build v23 -->
+  <script>
+    // Development build: remove older service workers/caches so GitHub Pages updates immediately.
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+    }
+    if ('caches' in window) {
+      caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+    }
+  </script>
 </body>
 </html>
