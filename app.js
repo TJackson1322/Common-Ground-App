@@ -1,3 +1,7 @@
+let mediaRecorder=null;
+let voiceChunks=[];
+let voiceStartedAt=0;
+let voiceTimer=null;
 const personalityTraits = [
   { key:'openness', title:'Curiosity & openness', low:'Prefer familiar', high:'Love new experiences' },
   { key:'conscientiousness', title:'Structure & follow-through', low:'Flexible / go with it', high:'Organized / dependable' },
@@ -244,11 +248,74 @@ function renderChatMessages(){
   if(activeChatId===null)return;
   const wrap=$('#chatMessages');const data=getConversations();const c=data[String(activeChatId)];
   const messages=c?.messages||[];
-  wrap.innerHTML=messages.length?messages.map(msg=>`<div class="message-row ${msg.from==='me'?'mine':''}"><div class="message-bubble">${escapeHTML(msg.text)}<span class="message-meta">${formatMessageTime(msg.time)}</span></div></div>`).join(''):'<div class="empty-messages"><p class="muted">You matched. Say hello when you’re ready.</p></div>';
+  wrap.innerHTML=messages.length?messages.map(msg=>{
+    if(msg.type==='voice'&&msg.audio){
+      const dur=msg.duration?formatDuration(msg.duration):'Voice memo';
+      return `<div class="message-row ${msg.from==='me'?'mine':''}"><div class="message-bubble voice-bubble"><div class="voice-label">🎙 Voice memo <span>${escapeHTML(dur)}</span></div><audio controls preload="metadata" src="${msg.audio}"></audio><span class="message-meta">${formatMessageTime(msg.time)}</span></div></div>`;
+    }
+    return `<div class="message-row ${msg.from==='me'?'mine':''}"><div class="message-bubble">${escapeHTML(msg.text||'')}<span class="message-meta">${formatMessageTime(msg.time)}</span></div></div>`;
+  }).join(''):'<div class="empty-messages"><p class="muted">You matched. Say hello when you’re ready.</p></div>';
   requestAnimationFrame(()=>{wrap.scrollTop=wrap.scrollHeight});
+}
+function formatDuration(seconds){
+  const s=Math.max(0,Math.round(Number(seconds)||0));
+  return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+}
+function setVoiceStatus(text,show=true){
+  const el=$('#voiceStatus');if(!el)return;
+  el.textContent=text;
+  el.classList.toggle('hidden',!show);
+}
+function updateVoiceTimer(){
+  if(!voiceStartedAt)return;
+  const seconds=Math.floor((Date.now()-voiceStartedAt)/1000);
+  setVoiceStatus(`Recording voice memo… ${formatDuration(seconds)} · tap the microphone again to send`);
+}
+async function toggleVoiceRecording(){
+  const btn=$('#voiceMemoBtn');
+  if(mediaRecorder&&mediaRecorder.state==='recording'){
+    mediaRecorder.stop();
+    return;
+  }
+  if(!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder==='undefined'){
+    setVoiceStatus('Voice recording is not supported in this browser. Try Safari or Chrome on a current phone.',true);
+    setTimeout(()=>setVoiceStatus('',false),4500);
+    return;
+  }
+  if(activeChatId===null)return;
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    voiceChunks=[];
+    mediaRecorder=new MediaRecorder(stream);
+    mediaRecorder.ondataavailable=e=>{if(e.data&&e.data.size)voiceChunks.push(e.data)};
+    mediaRecorder.onstop=()=>{
+      clearInterval(voiceTimer);voiceTimer=null;
+      const duration=(Date.now()-voiceStartedAt)/1000;voiceStartedAt=0;
+      btn?.classList.remove('recording');
+      stream.getTracks().forEach(t=>t.stop());
+      const blob=new Blob(voiceChunks,{type:mediaRecorder.mimeType||'audio/webm'});
+      if(!blob.size){setVoiceStatus('No audio was recorded.',true);setTimeout(()=>setVoiceStatus('',false),2500);return;}
+      const reader=new FileReader();
+      reader.onload=()=>{
+        const data=getConversations();const key=String(activeChatId);
+        if(!data[key])data[key]={profileId:activeChatId,unread:false,messages:[]};
+        data[key].messages.push({from:'me',type:'voice',audio:reader.result,duration,time:Date.now()});
+        try{saveConversations(data);setVoiceStatus('Voice memo sent.',true);setTimeout(()=>setVoiceStatus('',false),1800);}
+        catch(err){setVoiceStatus('That voice memo is too large to save in this prototype. Try a shorter memo.',true);setTimeout(()=>setVoiceStatus('',false),4500);}
+        renderChatMessages();renderConversations();
+      };
+      reader.readAsDataURL(blob);
+    };
+    mediaRecorder.start();voiceStartedAt=Date.now();btn?.classList.add('recording');
+    updateVoiceTimer();voiceTimer=setInterval(updateVoiceTimer,1000);
+  }catch(err){
+    setVoiceStatus('Microphone access is needed to record a voice memo.',true);
+    setTimeout(()=>setVoiceStatus('',false),4000);
+  }
 }
 function bindChat(){
   const form=$('#chatForm');if(!form)return;
+  const voiceBtn=$('#voiceMemoBtn');if(voiceBtn)voiceBtn.addEventListener('click',toggleVoiceRecording);
   form.addEventListener('submit',e=>{
     e.preventDefault();
     const input=$('#chatInput');const text=input.value.trim();if(!text||activeChatId===null)return;

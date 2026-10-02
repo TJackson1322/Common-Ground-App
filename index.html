@@ -151,9 +151,11 @@
         <div id="chatHeader" class="chat-header"></div>
         <div id="chatMessages" class="chat-messages" aria-live="polite"></div>
         <form id="chatForm" class="chat-composer">
+          <button id="voiceMemoBtn" class="voice-button" type="button" aria-label="Record voice memo" title="Record voice memo">🎙</button>
           <input id="chatInput" maxlength="500" autocomplete="off" placeholder="Write a message…" aria-label="Message" />
           <button class="primary" type="submit">Send</button>
         </form>
+        <div id="voiceStatus" class="voice-status hidden" aria-live="polite"></div>
       </div>
     </section>
 
