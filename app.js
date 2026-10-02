@@ -156,6 +156,8 @@ async function initSupabase(){
   currentSession=data?.session||null;currentUser=currentSession?.user||null;
   updateAuthUI();
   if(currentUser){await loadProfileFromSupabase();updateAuthUI();}
+  setTimeout(updateAuthUI,150);
+  setTimeout(updateAuthUI,800);
   supabaseClient.auth.onAuthStateChange(async(_event,session)=>{
     currentSession=session||null;currentUser=session?.user||null;updateAuthUI();
     if(currentUser){await loadProfileFromSupabase();updateAuthUI();}
@@ -163,21 +165,25 @@ async function initSupabase(){
 }
 function updateAuthUI(){
   const status=$('#authStatus'),account=$('#accountBtn'),signOut=$('#signOutBtn');
-  const homeAuth=$('#homeAuthBtn'),homeProfile=$('#homeProfileBtn'),homeMatches=$('#homeMatchesBtn');
+  const hero=$('#home .hero-actions');
+  const heroBtns=hero ? [...hero.querySelectorAll('button')] : [];
+  const homeProfile=$('#homeProfileBtn') || heroBtns.find(b=>b.dataset.nav==='onboarding') || heroBtns[0];
+  const homeMatches=$('#homeMatchesBtn') || heroBtns.find(b=>b.dataset.nav==='matches') || heroBtns[1];
+  const homeAuth=$('#homeAuthBtn') || heroBtns.find(b=>b.dataset.nav==='auth') || heroBtns[2];
   if(currentUser){
     if(status)status.textContent=currentUser.email||'Signed in';
     if(account){account.textContent='Account';account.classList.add('signed-in');}
     if(signOut)signOut.classList.remove('hidden');
     if(homeAuth){homeAuth.textContent='Account settings';homeAuth.dataset.nav='auth';}
-    if(homeProfile)homeProfile.textContent=localStorage.getItem('cg_profile')?'My profile':'Build my profile';
-    if(homeMatches)homeMatches.textContent='See my matches';
+    if(homeProfile){homeProfile.textContent=localStorage.getItem('cg_profile')?'My profile':'Build my profile';homeProfile.dataset.nav='onboarding';}
+    if(homeMatches){homeMatches.textContent='See my matches';homeMatches.dataset.nav='matches';}
   }else{
     if(status)status.textContent='Demo mode';
     if(account){account.textContent='Sign in';account.classList.remove('signed-in');}
     if(signOut)signOut.classList.add('hidden');
     if(homeAuth){homeAuth.textContent='Sign in / Create account';homeAuth.dataset.nav='auth';}
-    if(homeProfile)homeProfile.textContent='Build my profile';
-    if(homeMatches)homeMatches.textContent='See demo matches';
+    if(homeProfile){homeProfile.textContent='Build my profile';homeProfile.dataset.nav='onboarding';}
+    if(homeMatches){homeMatches.textContent='See demo matches';homeMatches.dataset.nav='matches';}
   }
 }
 async function signUpUser(){
