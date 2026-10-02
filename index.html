@@ -57,6 +57,17 @@
             <label>Oldest age you’re looking for<input required name="maxAge" type="number" min="18" max="99" value="40" /></label>
           </div>
           <p class="muted age-note">Only profiles inside your selected age range will be shown as potential matches.</p>
+          <div class="verification-box">
+            <div class="verification-icon">✓</div>
+            <div class="verification-copy">
+              <h4>Name &amp; Age Verification <span class="optional-pill">Optional</span></h4>
+              <p>Verify your legal name and date of birth privately. Matches only see a verification badge — never your ID or verification photo.</p>
+              <div class="verification-actions">
+                <button type="button" id="verifyIdentityBtn" class="secondary">Start verification</button>
+                <span id="verificationStatus" class="verification-status">Not verified</span>
+              </div>
+            </div>
+          </div>
           <label>Relationship goal<select name="goal"><option>Long-term relationship</option><option>Marriage-minded</option><option>Dating and seeing where it goes</option><option>Friendship first</option></select></label>
         </div>
 

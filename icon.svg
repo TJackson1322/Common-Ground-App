@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Common Ground logo mark">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#25312c"/>
+      <stop offset="100%" stop-color="#151b18"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#d8bf88"/>
+      <stop offset="100%" stop-color="#b59049"/>
+    </linearGradient>
+    <linearGradient id="sage" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#8ea092"/>
+      <stop offset="100%" stop-color="#66786d"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="122" fill="url(#bg)"/>
+  <path d="M227 145c-72 0-132 50-151 117-4 15-6 30-6 46s2 31 6 46c19 67 79 117 151 117 40 0 77-15 106-40l-27-36c-20 18-46 29-75 29-58 0-106-42-117-97-2-6-2-13-2-19s0-13 2-19c11-55 59-97 117-97 29 0 55 10 76 28l26-37c-30-25-67-38-106-38Z" fill="url(#gold)"/>
+  <path d="M286 145c72 0 132 50 151 117 4 15 6 30 6 46s-2 31-6 46c-19 67-79 117-151 117-40 0-77-15-106-40l27-36c20 18 46 29 75 29 58 0 106-42 117-97 2-6 2-13 2-19s0-13-2-19c-11-55-59-97-117-97-29 0-55 10-76 28l-26-37c30-25 67-38 106-38Z" fill="url(#sage)" opacity="0.95"/>
+  <path d="M256 155c37 27 59 69 59 112s-22 85-59 112c-37-27-59-69-59-112s22-85 59-112Z" fill="#1f2824" opacity="0.96"/>
+  <circle cx="256" cy="267" r="26" fill="#fbf7f0" opacity="0.96"/>
+  <path d="M164 391c17 0 32-3 45-10 15-8 27-19 37-34" fill="none" stroke="#f5ecdc" stroke-linecap="round" stroke-width="10" opacity="0.88"/>
+  <path d="M347 184c-16 0-31 4-44 10-15 8-28 20-38 35" fill="none" stroke="#f5ecdc" stroke-linecap="round" stroke-width="10" opacity="0.7"/>
+</svg>
