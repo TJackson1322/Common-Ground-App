@@ -9,7 +9,7 @@
   <link rel="icon" href="icon-192.png?v=3" sizes="192x192" type="image/png" />
   <link rel="icon" href="icon-512.png?v=3" sizes="512x512" type="image/png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=3" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=7" />
   <title>Common Ground</title>
 </head>
 <body>
@@ -81,10 +81,16 @@
           <p class="muted">Being sober or not using something is never treated as a negative. These answers only help avoid obvious lifestyle conflicts.</p>
           <div class="form-grid">
             <label>Alcohol<select name="alcohol"><option>Never</option><option>Occasionally</option><option>Socially</option><option>Regularly</option><option>Sober / in recovery</option></select></label>
-            <label>Cigarettes<select name="nicotine"><option>Never</option><option>Occasionally</option><option>Regularly</option><option>Trying to quit</option></select></label>
-            <label>Vaping / e-cigarettes<select name="vaping"><option>Never</option><option>Occasionally</option><option>Regularly</option><option>Trying to quit</option></select></label>
             <label>Cannabis<select name="cannabis"><option>Never</option><option>Occasionally</option><option>Regularly</option><option>Prefer not to say</option></select></label>
             <label>Alcohol-free first date?<select name="alcoholFree"><option>Yes</option><option>Sometimes</option><option>No preference</option></select></label>
+          </div>
+          <div class="preference-box smoking-vaping-box">
+            <h4>Smoking &amp; Vaping</h4>
+            <p class="muted">Answer these separately so a match can distinguish cigarettes from vaping.</p>
+            <div class="form-grid">
+              <label>Cigarette smoking<select name="nicotine"><option>Never</option><option>Occasionally</option><option>Regularly</option><option>Trying to quit</option></select></label>
+              <label>Vaping / e-cigarettes<select name="vaping"><option>Never</option><option>Occasionally</option><option>Regularly</option><option>Trying to quit</option></select></label>
+            </div>
           </div>
           <div class="preference-box">
             <h4>Would you date someone who…</h4>
@@ -173,6 +179,6 @@
       <button data-nav="onboarding">☻<span>Profile</span></button>
     </nav>
   </main>
-  <script src="app.js"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>
