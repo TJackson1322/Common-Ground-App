@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1f2824" />
+  <meta name="description" content="Common Ground — a psychology-informed blind dating prototype focused on compatibility before appearance." />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon-192.png?v=3" sizes="192x192" type="image/png" />
+  <link rel="icon" href="icon-512.png?v=3" sizes="512x512" type="image/png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=3" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Common Ground</title>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <button class="brand" data-nav="home" aria-label="Common Ground home">
+        <img class="brand-lockup" src="brand-lockup.png?v=3" alt="Common Ground" />
+      </button>
+      <button id="installBtn" class="ghost hidden">Install</button>
+    </header>
+
+    <section id="home" class="screen active">
+      <div class="hero card">
+        <span class="eyebrow">Blind dating, but thoughtful.</span>
+        <h1>Meet the person before the picture.</h1>
+        <p>Common Ground matches people using relationship goals, lifestyle, personality, interests, and approximate location — then explains why the match makes sense.</p>
+        <div class="hero-actions">
+          <button class="primary" data-nav="onboarding">Build my profile</button>
+          <button class="secondary" data-nav="matches">See demo matches</button>
+        </div>
+      </div>
+
+      <div class="grid three">
+        <article class="card mini"><span class="icon">🧠</span><h3>Psychology-informed</h3><p>Uses Big Five-style personality dimensions and communication preferences without pretending to predict love.</p></article>
+        <article class="card mini"><span class="icon">🫶</span><h3>Lifestyle matters</h3><p>Alcohol, cigarettes/nicotine, cannabis, sobriety, children, social habits, and deal-breakers can all affect compatibility.</p></article>
+        <article class="card mini"><span class="icon">📍</span><h3>Privacy first</h3><p>Only a broad city/area and preferred distance are used in this prototype. Exact location is never displayed.</p></article>
+      </div>
+    </section>
+
+    <section id="onboarding" class="screen">
+      <div class="section-head">
+        <div><span class="eyebrow">Your profile</span><h2>Tell us what actually matters.</h2></div>
+        <div class="progress-wrap"><div id="progressBar" class="progress"></div></div>
+      </div>
+
+      <form id="profileForm" class="card form-card">
+        <div class="step active" data-step="1">
+          <h3>Basics</h3>
+          <div class="form-grid">
+            <label>First name<input required name="name" maxlength="30" placeholder="Alex" /></label>
+            <label>Age<input required name="age" type="number" min="18" max="99" placeholder="28" /></label>
+            <label>City or general area<input required name="area" placeholder="Louisville, KY" /></label>
+            <label>Preferred dating radius<select name="radius"><option value="10">10 miles</option><option value="25" selected>25 miles</option><option value="50">50 miles</option><option value="100">100 miles</option></select></label>
+          </div>
+          <label>Relationship goal<select name="goal"><option>Long-term relationship</option><option>Marriage-minded</option><option>Dating and seeing where it goes</option><option>Friendship first</option></select></label>
+        </div>
+
+        <div class="step" data-step="2">
+          <h3>Personality</h3>
+          <p class="muted">Slide toward what feels most like you. There are no “better” answers.</p>
+          <div id="personalitySliders"></div>
+        </div>
+
+        <div class="step" data-step="3">
+          <h3>Communication & daily life</h3>
+          <div class="form-grid">
+            <label>When something is wrong, I prefer<select name="conflict"><option>Talk it through quickly</option><option>Take some space, then talk</option><option>Keep things calm and brief</option><option>Use humor, then talk</option></select></label>
+            <label>My social energy<select name="social"><option>Mostly homebody</option><option>Balanced</option><option>Usually social</option><option>Always doing something</option></select></label>
+            <label>Planning style<select name="planning"><option>Plan almost everything</option><option>Plan the important things</option><option>Mostly spontaneous</option><option>Very spontaneous</option></select></label>
+            <label>Children<select name="children"><option>I have children</option><option>I want children</option><option>I may want children</option><option>I do not want children</option><option>I am open either way</option></select></label>
+          </div>
+        </div>
+
+        <div class="step" data-step="4">
+          <h3>Lifestyle compatibility</h3>
+          <p class="muted">Being sober or not using something is never treated as a negative. These answers only help avoid obvious lifestyle conflicts.</p>
+          <div class="form-grid">
+            <label>Alcohol<select name="alcohol"><option>Never</option><option>Occasionally</option><option>Socially</option><option>Regularly</option><option>Sober / in recovery</option></select></label>
+            <label>Cigarettes / nicotine<select name="nicotine"><option>Never</option><option>Occasionally</option><option>Regularly</option><option>Trying to quit</option></select></label>
+            <label>Cannabis<select name="cannabis"><option>Never</option><option>Occasionally</option><option>Regularly</option><option>Prefer not to say</option></select></label>
+            <label>Alcohol-free first date?<select name="alcoholFree"><option>Yes</option><option>Sometimes</option><option>No preference</option></select></label>
+          </div>
+          <div class="preference-box">
+            <h4>Would you date someone who…</h4>
+            <div class="form-grid">
+              <label>Drinks alcohol?<select name="dateDrinker"><option>Yes</option><option>Sometimes / depends</option><option>No</option></select></label>
+              <label>Smokes or uses nicotine?<select name="dateSmoker"><option>Yes</option><option>Sometimes / depends</option><option>No</option></select></label>
+              <label>Is sober / in recovery?<select name="dateSober"><option>Yes</option><option>No preference</option><option>Prefer not to</option></select></label>
+              <label>Uses cannabis?<select name="dateCannabis"><option>Yes</option><option>Sometimes / depends</option><option>No</option></select></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="step" data-step="5">
+          <h3>Interests</h3>
+          <p class="muted">Choose at least three. Shared hobbies matter, but they are not the whole match.</p>
+          <div id="interestGrid" class="chips"></div>
+          <label class="top-gap">A few words about you<textarea name="bio" maxlength="300" placeholder="What would a good Saturday look like for you?"></textarea></label>
+        </div>
+
+        <div class="step" data-step="6">
+          <h3>Your deal-breakers</h3>
+          <p class="muted">These are respected before a compatibility score is calculated.</p>
+          <div class="checks">
+            <label><input type="checkbox" name="dealGoal" checked /> Relationship goals must be compatible</label>
+            <label><input type="checkbox" name="dealSmoking" /> I will not date a regular cigarette/nicotine user</label>
+            <label><input type="checkbox" name="dealAlcohol" /> I will not date someone who regularly drinks</label>
+            <label><input type="checkbox" name="dealCannabis" /> I will not date a regular cannabis user</label>
+          </div>
+          <div class="notice"><strong>18+ only.</strong> Alcohol-related date suggestions are hidden for users under 21 in this U.S.-focused prototype.</div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" id="prevBtn" class="secondary hidden">Back</button>
+          <button type="button" id="nextBtn" class="primary">Continue</button>
+          <button type="submit" id="saveBtn" class="primary hidden">Save & find matches</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="matches" class="screen">
+      <div class="section-head">
+        <div><span class="eyebrow">Curated matches</span><h2>Your common ground</h2><p id="matchIntro" class="muted">Complete your profile for personalized results. Until then, these use a balanced demo profile.</p></div>
+        <button class="secondary" data-nav="onboarding">Edit profile</button>
+      </div>
+      <div id="matchList" class="match-list"></div>
+    </section>
+
+    <section id="matchDetail" class="screen">
+      <button class="ghost back-link" data-nav="matches">← Back to matches</button>
+      <div id="matchDetailContent"></div>
+    </section>
+
+    <section id="about" class="screen">
+      <div class="card"><span class="eyebrow">How it works</span><h2>Compatibility, not certainty.</h2><p>Common Ground is a prototype matching tool. It does not diagnose anyone, make mental-health judgments, or guarantee relationship success. Personality information is one part of a broader compatibility model.</p><p>Your prototype profile is saved only in your browser using local storage. A production version should add secure authentication, encrypted server storage, moderation, reporting, blocking, identity/age verification, and privacy controls.</p></div>
+    </section>
+
+    <nav class="bottom-nav" aria-label="Main navigation">
+      <button data-nav="home">⌂<span>Home</span></button>
+      <button data-nav="matches">♡<span>Matches</span></button>
+      <button data-nav="onboarding">☻<span>Profile</span></button>
+      <button data-nav="about">ⓘ<span>About</span></button>
+    </nav>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
