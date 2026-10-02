@@ -13,11 +13,11 @@ const personalityTraits = [
 const interests = ['Family time','Racing / motorsports','Travel','Movies','Reading','Gaming','Fitness','Cooking','Music','Concerts','Outdoors','Camping','Hiking','Sports','Pets','Art / design','Technology','DIY projects','Coffee shops','Restaurants','Volunteering','Faith / spirituality','Board games','Photography'];
 
 const demoProfiles = [
-  {id:1,name:'Jordan',age:32,area:'Louisville area',distance:12,goal:'Long-term relationship',conflict:'Take some space, then talk',social:'Balanced',planning:'Plan the important things',children:'I have children',alcohol:'Occasionally',nicotine:'Never',cannabis:'Never',alcoholFree:'Sometimes',interests:['Family time','Racing / motorsports','Movies','Restaurants','Outdoors','Technology'],bio:'Parent, weekend adventurer, and the person who always knows a good hole-in-the-wall restaurant.',personality:{openness:72,conscientiousness:75,extraversion:52,agreeableness:78,emotionalStability:69}},
-  {id:2,name:'Taylor',age:29,area:'Jeffersonville area',distance:18,goal:'Marriage-minded',conflict:'Talk it through quickly',social:'Mostly homebody',planning:'Plan almost everything',children:'I want children',alcohol:'Never',nicotine:'Never',cannabis:'Never',alcoholFree:'Yes',interests:['Reading','Coffee shops','Family time','Pets','Cooking','Board games'],bio:'Bookstore dates, Sunday brunch, dog walks, and calm conversations are my speed.',personality:{openness:65,conscientiousness:88,extraversion:35,agreeableness:85,emotionalStability:77}},
-  {id:3,name:'Casey',age:35,area:'Oldham County area',distance:9,goal:'Dating and seeing where it goes',conflict:'Use humor, then talk',social:'Usually social',planning:'Mostly spontaneous',children:'I am open either way',alcohol:'Socially',nicotine:'Occasionally',cannabis:'Occasionally',alcoholFree:'No preference',interests:['Concerts','Travel','Sports','Restaurants','Photography','Outdoors'],bio:'Always ready for a concert, road trip, or game — but also appreciates a quiet night in.',personality:{openness:84,conscientiousness:55,extraversion:78,agreeableness:70,emotionalStability:64}},
-  {id:4,name:'Morgan',age:33,area:'Louisville area',distance:21,goal:'Long-term relationship',conflict:'Take some space, then talk',social:'Balanced',planning:'Plan the important things',children:'I have children',alcohol:'Sober / in recovery',nicotine:'Never',cannabis:'Never',alcoholFree:'Yes',interests:['Family time','Fitness','Movies','Volunteering','Coffee shops','Music'],bio:'Sober, grounded, family-first, and happiest when life has a little purpose and a lot of laughter.',personality:{openness:70,conscientiousness:81,extraversion:50,agreeableness:89,emotionalStability:73}},
-  {id:5,name:'Riley',age:30,area:'New Albany area',distance:27,goal:'Long-term relationship',conflict:'Keep things calm and brief',social:'Mostly homebody',planning:'Plan the important things',children:'I may want children',alcohol:'Occasionally',nicotine:'Regularly',cannabis:'Never',alcoholFree:'Sometimes',interests:['Gaming','Technology','Movies','DIY projects','Cooking','Music'],bio:'Techie, homebody, amateur cook, and very serious about movie-night snacks.',personality:{openness:76,conscientiousness:67,extraversion:30,agreeableness:72,emotionalStability:70}}
+  {id:1,name:'Jordan',age:32,area:'Louisville area',distance:12,goal:'Long-term relationship',conflict:'Take some space, then talk',social:'Balanced',planning:'Plan the important things',children:'I have children',alcohol:'Occasionally',nicotine:'Never',vaping:'Never',cannabis:'Never',alcoholFree:'Sometimes',interests:['Family time','Racing / motorsports','Movies','Restaurants','Outdoors','Technology'],bio:'Parent, weekend adventurer, and the person who always knows a good hole-in-the-wall restaurant.',personality:{openness:72,conscientiousness:75,extraversion:52,agreeableness:78,emotionalStability:69}},
+  {id:2,name:'Taylor',age:29,area:'Jeffersonville area',distance:18,goal:'Marriage-minded',conflict:'Talk it through quickly',social:'Mostly homebody',planning:'Plan almost everything',children:'I want children',alcohol:'Never',nicotine:'Never',vaping:'Never',cannabis:'Never',alcoholFree:'Yes',interests:['Reading','Coffee shops','Family time','Pets','Cooking','Board games'],bio:'Bookstore dates, Sunday brunch, dog walks, and calm conversations are my speed.',personality:{openness:65,conscientiousness:88,extraversion:35,agreeableness:85,emotionalStability:77}},
+  {id:3,name:'Casey',age:35,area:'Oldham County area',distance:9,goal:'Dating and seeing where it goes',conflict:'Use humor, then talk',social:'Usually social',planning:'Mostly spontaneous',children:'I am open either way',alcohol:'Socially',nicotine:'Occasionally',vaping:'Occasionally',cannabis:'Occasionally',alcoholFree:'No preference',interests:['Concerts','Travel','Sports','Restaurants','Photography','Outdoors'],bio:'Always ready for a concert, road trip, or game — but also appreciates a quiet night in.',personality:{openness:84,conscientiousness:55,extraversion:78,agreeableness:70,emotionalStability:64}},
+  {id:4,name:'Morgan',age:33,area:'Louisville area',distance:21,goal:'Long-term relationship',conflict:'Take some space, then talk',social:'Balanced',planning:'Plan the important things',children:'I have children',alcohol:'Sober / in recovery',nicotine:'Never',vaping:'Never',cannabis:'Never',alcoholFree:'Yes',interests:['Family time','Fitness','Movies','Volunteering','Coffee shops','Music'],bio:'Sober, grounded, family-first, and happiest when life has a little purpose and a lot of laughter.',personality:{openness:70,conscientiousness:81,extraversion:50,agreeableness:89,emotionalStability:73}},
+  {id:5,name:'Riley',age:30,area:'New Albany area',distance:27,goal:'Long-term relationship',conflict:'Keep things calm and brief',social:'Mostly homebody',planning:'Plan the important things',children:'I may want children',alcohol:'Occasionally',nicotine:'Regularly',vaping:'Regularly',cannabis:'Never',alcoholFree:'Sometimes',interests:['Gaming','Technology','Movies','DIY projects','Cooking','Music'],bio:'Techie, homebody, amateur cook, and very serious about movie-night snacks.',personality:{openness:76,conscientiousness:67,extraversion:30,agreeableness:72,emotionalStability:70}}
 ];
 
 let step = 1;
@@ -96,7 +96,7 @@ function getProfileFromForm(){
   obj.age=Number(obj.age);obj.radius=Number(obj.radius);obj.minAge=Number(obj.minAge);obj.maxAge=Number(obj.maxAge);
   obj.personality={};personalityTraits.forEach(t=>obj.personality[t.key]=Number(obj[t.key]));
   obj.interests=[...selectedInterests];
-  obj.deals={goal:fd.has('dealGoal'),smoking:fd.has('dealSmoking'),alcohol:fd.has('dealAlcohol'),cannabis:fd.has('dealCannabis')};
+  obj.deals={goal:fd.has('dealGoal'),smoking:fd.has('dealSmoking'),vaping:fd.has('dealVaping'),alcohol:fd.has('dealAlcohol'),cannabis:fd.has('dealCannabis')};
   return obj;
 }
 function saveProfile(){localStorage.setItem('cg_profile',JSON.stringify(getProfileFromForm()));}
@@ -106,23 +106,25 @@ function restoreProfile(){
   Object.entries(p).forEach(([k,v])=>{if(['personality','interests','deals'].includes(k))return;if(f.elements[k])f.elements[k].value=v});
   personalityTraits.forEach(t=>{if(p.personality?.[t.key]!==undefined){f.elements[t.key].value=p.personality[t.key];$(`#${t.key}Value`).textContent=p.personality[t.key];}});
   selectedInterests=new Set(p.interests||[]);$$('[data-interest]').forEach(b=>b.classList.toggle('selected',selectedInterests.has(b.dataset.interest)));
-  if(p.deals){[['dealGoal','goal'],['dealSmoking','smoking'],['dealAlcohol','alcohol'],['dealCannabis','cannabis']].forEach(([el,key])=>{f.elements[el].checked=!!p.deals[key]});}
+  if(p.deals){[['dealGoal','goal'],['dealSmoking','smoking'],['dealVaping','vaping'],['dealAlcohol','alcohol'],['dealCannabis','cannabis']].forEach(([el,key])=>{f.elements[el].checked=!!p.deals[key]});}
 }
 
 function getUserProfile(){
   const raw=localStorage.getItem('cg_profile');
   if(raw)return JSON.parse(raw);
-  return {name:'You',age:30,area:'your area',radius:25,minAge:25,maxAge:40,goal:'Long-term relationship',conflict:'Take some space, then talk',social:'Balanced',planning:'Plan the important things',children:'I have children',alcohol:'Occasionally',nicotine:'Never',cannabis:'Never',dateDrinker:'Sometimes / depends',dateSmoker:'No',dateSober:'No preference',dateCannabis:'Sometimes / depends',interests:['Family time','Movies','Restaurants','Outdoors','Technology'],personality:{openness:70,conscientiousness:74,extraversion:50,agreeableness:78,emotionalStability:68},deals:{goal:true,smoking:false,alcohol:false,cannabis:false}};
+  return {name:'You',age:30,area:'your area',radius:25,minAge:25,maxAge:40,goal:'Long-term relationship',conflict:'Take some space, then talk',social:'Balanced',planning:'Plan the important things',children:'I have children',alcohol:'Occasionally',nicotine:'Never',vaping:'Never',cannabis:'Never',dateDrinker:'Sometimes / depends',dateSmoker:'No',dateSober:'No preference',dateCannabis:'Sometimes / depends',interests:['Family time','Movies','Restaurants','Outdoors','Technology'],personality:{openness:70,conscientiousness:74,extraversion:50,agreeableness:78,emotionalStability:68},deals:{goal:true,smoking:false,vaping:false,alcohol:false,cannabis:false}};
 }
 
 function hardConflict(u,m){
   const minAge=Number(u.minAge??18),maxAge=Number(u.maxAge??99);
   if(Number(m.age)<minAge || Number(m.age)>maxAge) return `Outside your preferred age range (${minAge}–${maxAge})`;
   if(u.deals?.goal && !goalCompatible(u.goal,m.goal)) return 'Different relationship goals';
-  if(u.deals?.smoking && m.nicotine==='Regularly') return 'Regular nicotine use is one of your deal-breakers';
+  if(u.deals?.smoking && m.nicotine==='Regularly') return 'Regular cigarette smoking is one of your deal-breakers';
+  if(u.deals?.vaping && (m.vaping??'Never')==='Regularly') return 'Regular vaping is one of your deal-breakers';
   if(u.deals?.alcohol && m.alcohol==='Regularly') return 'Regular drinking is one of your deal-breakers';
   if(u.deals?.cannabis && m.cannabis==='Regularly') return 'Regular cannabis use is one of your deal-breakers';
-  if(u.dateSmoker==='No' && m.nicotine==='Regularly') return 'You said you would not date a regular nicotine user';
+  if(u.dateSmoker==='No' && m.nicotine==='Regularly') return 'You said you would not date a regular cigarette smoker';
+  if(u.dateVaper==='No' && (m.vaping??'Never')==='Regularly') return 'You said you would not date someone who regularly vapes';
   if(u.dateDrinker==='No' && ['Regularly','Socially'].includes(m.alcohol)) return 'Alcohol preference conflict';
   if(u.dateCannabis==='No' && ['Regularly','Occasionally'].includes(m.cannabis)) return 'Cannabis preference conflict';
   if(u.dateSober==='Prefer not to' && m.alcohol==='Sober / in recovery') return 'Sobriety preference conflict';
@@ -144,13 +146,14 @@ function calcMatch(u,m){
   return {blocked:false,score:Math.min(99,total),parts:{Goals:Math.round(goal),Lifestyle:Math.round(lifestyle),Personality:Math.round(personality),Interests:Math.round(hobby),Distance:Math.round(distance)}};
 }
 function lifestyleScore(u,m){
-  let points=0,max=6;
+  let points=0,max=7;
   points+=u.conflict===m.conflict?1:.6;
   points+=u.social===m.social?1:.6;
   points+=u.planning===m.planning?1:.65;
   points+=u.children===m.children?1:childrenCompatible(u.children,m.children);
   points+=substanceCompat(u.alcohol,m.alcohol,'alcohol');
   points+=substanceCompat(u.nicotine,m.nicotine,'nicotine');
+  points+=substanceCompat(u.vaping??'Never',m.vaping??'Never','vaping');
   return (points/max)*100;
 }
 function childrenCompatible(a,b){if(a==='I am open either way'||b==='I am open either way')return .8;if(a.includes('have children')&&b.includes('have children'))return 1;if(a.includes('want children')&&b.includes('want children'))return .9;return .55}
@@ -186,7 +189,7 @@ function showDetail(id){
   const u=getUserProfile(),m=demoProfiles.find(x=>x.id===id),r=calcMatch(u,m);if(!m||r.blocked)return;
   const shared=m.interests.filter(i=>(u.interests||[]).includes(i));
   const date=suggestDate(u,m,shared);
-  $('#matchDetailContent').innerHTML=`<div class="detail-grid"><article class="card detail-card"><span class="eyebrow">Compatibility</span><div class="score-big">${r.score}%</div><h2>${m.name}, ${m.age}</h2><p class="muted">${m.area} · about ${m.distance} miles away</p><p>${m.bio}</p><div class="tag-row">${m.interests.slice(0,6).map(i=>`<span class="tag">${i}</span>`).join('')}</div><div class="match-actions"><button class="primary" data-message-match="${m.id}">Message</button><button class="secondary" data-nav="matches">Back to matches</button></div></article><article class="card detail-card"><span class="eyebrow">Why you two?</span><h2>There’s real overlap here.</h2><ul class="why-list">${reasons(u,m,r).map(x=>`<li>${x}</li>`).join('')}</ul><div class="compat-bars">${Object.entries(r.parts).map(([k,v])=>`<div class="bar-row"><span>${k}</span><div class="bar"><span style="width:${v}%"></span></div><strong>${v}</strong></div>`).join('')}</div></article></div><div class="detail-grid" style="margin-top:18px"><article class="card detail-card"><span class="eyebrow">Lifestyle snapshot</span><h3>${m.alcohol}</h3><p>Alcohol · ${m.nicotine} nicotine · ${m.cannabis} cannabis</p><p class="muted">Lifestyle answers are used for compatibility only. The app does not treat sobriety, abstinence, or substance use as a measure of character.</p></article><article class="date-box"><span class="eyebrow" style="color:#d7bf8c">Suggested first date</span><h2>${date.title}</h2><p>${date.text}</p><strong>${date.cost}</strong></article></div>`;
+  $('#matchDetailContent').innerHTML=`<div class="detail-grid"><article class="card detail-card"><span class="eyebrow">Compatibility</span><div class="score-big">${r.score}%</div><h2>${m.name}, ${m.age}</h2><p class="muted">${m.area} · about ${m.distance} miles away</p><p>${m.bio}</p><div class="tag-row">${m.interests.slice(0,6).map(i=>`<span class="tag">${i}</span>`).join('')}</div><div class="match-actions"><button class="primary" data-message-match="${m.id}">Message</button><button class="secondary" data-nav="matches">Back to matches</button></div></article><article class="card detail-card"><span class="eyebrow">Why you two?</span><h2>There’s real overlap here.</h2><ul class="why-list">${reasons(u,m,r).map(x=>`<li>${x}</li>`).join('')}</ul><div class="compat-bars">${Object.entries(r.parts).map(([k,v])=>`<div class="bar-row"><span>${k}</span><div class="bar"><span style="width:${v}%"></span></div><strong>${v}</strong></div>`).join('')}</div></article></div><div class="detail-grid" style="margin-top:18px"><article class="card detail-card"><span class="eyebrow">Lifestyle snapshot</span><h3>${m.alcohol}</h3><p>Alcohol · ${m.nicotine} cigarettes · ${(m.vaping??'Never')} vaping · ${m.cannabis} cannabis</p><p class="muted">Lifestyle answers are used for compatibility only. The app does not treat sobriety, abstinence, or substance use as a measure of character.</p></article><article class="date-box"><span class="eyebrow" style="color:#d7bf8c">Suggested first date</span><h2>${date.title}</h2><p>${date.text}</p><strong>${date.cost}</strong></article></div>`;
   showScreen('matchDetail');
   $$('[data-message-match]').forEach(b=>b.addEventListener('click',()=>openChat(Number(b.dataset.messageMatch))));
   $$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));

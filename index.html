@@ -34,7 +34,7 @@
 
       <div class="grid three">
         <article class="card mini"><span class="icon">🧠</span><h3>Psychology-informed</h3><p>Uses Big Five-style personality dimensions and communication preferences without pretending to predict love.</p></article>
-        <article class="card mini"><span class="icon">🫶</span><h3>Lifestyle matters</h3><p>Alcohol, cigarettes/nicotine, cannabis, sobriety, children, social habits, and deal-breakers can all affect compatibility.</p></article>
+        <article class="card mini"><span class="icon">🫶</span><h3>Lifestyle matters</h3><p>Alcohol, cigarettes, vaping, cannabis, sobriety, children, social habits, and deal-breakers can all affect compatibility.</p></article>
         <article class="card mini"><span class="icon">📍</span><h3>Privacy first</h3><p>Only a broad city/area and preferred distance are used in this prototype. Exact location is never displayed.</p></article>
       </div>
     </section>
@@ -81,7 +81,8 @@
           <p class="muted">Being sober or not using something is never treated as a negative. These answers only help avoid obvious lifestyle conflicts.</p>
           <div class="form-grid">
             <label>Alcohol<select name="alcohol"><option>Never</option><option>Occasionally</option><option>Socially</option><option>Regularly</option><option>Sober / in recovery</option></select></label>
-            <label>Cigarettes / nicotine<select name="nicotine"><option>Never</option><option>Occasionally</option><option>Regularly</option><option>Trying to quit</option></select></label>
+            <label>Cigarettes<select name="nicotine"><option>Never</option><option>Occasionally</option><option>Regularly</option><option>Trying to quit</option></select></label>
+            <label>Vaping / e-cigarettes<select name="vaping"><option>Never</option><option>Occasionally</option><option>Regularly</option><option>Trying to quit</option></select></label>
             <label>Cannabis<select name="cannabis"><option>Never</option><option>Occasionally</option><option>Regularly</option><option>Prefer not to say</option></select></label>
             <label>Alcohol-free first date?<select name="alcoholFree"><option>Yes</option><option>Sometimes</option><option>No preference</option></select></label>
           </div>
@@ -89,7 +90,8 @@
             <h4>Would you date someone who…</h4>
             <div class="form-grid">
               <label>Drinks alcohol?<select name="dateDrinker"><option>Yes</option><option>Sometimes / depends</option><option>No</option></select></label>
-              <label>Smokes or uses nicotine?<select name="dateSmoker"><option>Yes</option><option>Sometimes / depends</option><option>No</option></select></label>
+              <label>Smokes cigarettes?<select name="dateSmoker"><option>Yes</option><option>Sometimes / depends</option><option>No</option></select></label>
+              <label>Vapes?<select name="dateVaper"><option>Yes</option><option>Sometimes / depends</option><option>No</option></select></label>
               <label>Is sober / in recovery?<select name="dateSober"><option>Yes</option><option>No preference</option><option>Prefer not to</option></select></label>
               <label>Uses cannabis?<select name="dateCannabis"><option>Yes</option><option>Sometimes / depends</option><option>No</option></select></label>
             </div>
@@ -108,7 +110,8 @@
           <p class="muted">These are respected before a compatibility score is calculated.</p>
           <div class="checks">
             <label><input type="checkbox" name="dealGoal" checked /> Relationship goals must be compatible</label>
-            <label><input type="checkbox" name="dealSmoking" /> I will not date a regular cigarette/nicotine user</label>
+            <label><input type="checkbox" name="dealSmoking" /> I will not date a regular cigarette smoker</label>
+            <label><input type="checkbox" name="dealVaping" /> I will not date someone who regularly vapes</label>
             <label><input type="checkbox" name="dealAlcohol" /> I will not date someone who regularly drinks</label>
             <label><input type="checkbox" name="dealCannabis" /> I will not date a regular cannabis user</label>
           </div>
