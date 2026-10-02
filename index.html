@@ -6,17 +6,17 @@
   <meta name="theme-color" content="#1f2824" />
   <meta name="description" content="Common Ground — a psychology-informed blind dating prototype focused on compatibility before appearance." />
   <link rel="manifest" href="manifest.json" />
-  <link rel="icon" href="icon-192.png?v=21" sizes="192x192" type="image/png" />
-  <link rel="icon" href="icon-512.png?v=21" sizes="512x512" type="image/png" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=21" />
-  <link rel="stylesheet" href="styles.css?v=21" />
+  <link rel="icon" href="icon-192.png?v=22" sizes="192x192" type="image/png" />
+  <link rel="icon" href="icon-512.png?v=22" sizes="512x512" type="image/png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=22" />
+  <link rel="stylesheet" href="styles.css?v=22" />
   <title>Common Ground</title>
 </head>
 <body>
   <main class="app-shell">
     <header class="topbar">
       <button class="brand" data-nav="home" aria-label="Common Ground home">
-        <img class="brand-lockup" src="brand-lockup.png?v=21" alt="Common Ground" />
+        <img class="brand-lockup" src="brand-lockup.png?v=22" alt="Common Ground" />
       </button>
       <div class="topbar-actions">
         <span id="authStatus" class="auth-status">Demo mode</span>
@@ -32,9 +32,9 @@
         <h1>Meet the person before the picture.</h1>
         <p>Common Ground matches people using relationship goals, lifestyle, personality, interests, and approximate location — then explains why the match makes sense.</p>
         <div class="hero-actions">
-          <button class="primary" data-nav="onboarding">Build my profile</button>
-          <button class="secondary" data-nav="matches">See demo matches</button>
-          <button class="ghost" data-nav="auth">Sign in / Create account</button>
+          <button id="homeProfileBtn" class="primary" data-nav="onboarding">Build my profile</button>
+          <button id="homeMatchesBtn" class="secondary" data-nav="matches">See demo matches</button>
+          <button id="homeAuthBtn" class="ghost" data-nav="auth">Sign in / Create account</button>
         </div>
       </div>
 
@@ -218,6 +218,6 @@
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js?v=21"></script>
-  <!-- Common Ground real accounts build v21 -->
+  <!-- Common Ground real accounts build v22 -->
 </body>
 </html>

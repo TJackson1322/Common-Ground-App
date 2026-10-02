@@ -163,14 +163,21 @@ async function initSupabase(){
 }
 function updateAuthUI(){
   const status=$('#authStatus'),account=$('#accountBtn'),signOut=$('#signOutBtn');
+  const homeAuth=$('#homeAuthBtn'),homeProfile=$('#homeProfileBtn'),homeMatches=$('#homeMatchesBtn');
   if(currentUser){
     if(status)status.textContent=currentUser.email||'Signed in';
     if(account){account.textContent='Account';account.classList.add('signed-in');}
     if(signOut)signOut.classList.remove('hidden');
+    if(homeAuth){homeAuth.textContent='Account settings';homeAuth.dataset.nav='auth';}
+    if(homeProfile)homeProfile.textContent=localStorage.getItem('cg_profile')?'My profile':'Build my profile';
+    if(homeMatches)homeMatches.textContent='See my matches';
   }else{
     if(status)status.textContent='Demo mode';
     if(account){account.textContent='Sign in';account.classList.remove('signed-in');}
     if(signOut)signOut.classList.add('hidden');
+    if(homeAuth){homeAuth.textContent='Sign in / Create account';homeAuth.dataset.nav='auth';}
+    if(homeProfile)homeProfile.textContent='Build my profile';
+    if(homeMatches)homeMatches.textContent='See demo matches';
   }
 }
 async function signUpUser(){

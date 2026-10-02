@@ -1,4 +1,4 @@
-const CACHE='common-ground-v21';
+const CACHE='common-ground-v22';
 const ASSETS=['./','index.html','styles.css?v=21','app.js?v=21','manifest.json','icon-192.png','icon-512.png','apple-touch-icon.png','brand-lockup.png'];
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));});
 self.addEventListener('activate',e=>e.waitUntil(Promise.all([self.clients.claim(),caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))])));
