@@ -100,6 +100,24 @@ function updateStep(){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
+
+function profileStorageKey(userId=currentUser?.id){
+  return userId ? `cg_profile_${userId}` : 'cg_profile_demo';
+}
+function readStoredProfile(){
+  const raw=localStorage.getItem(profileStorageKey());
+  if(raw)return raw;
+  // Backward compatibility: signed-out demo may use legacy key. Never reuse legacy data for a signed-in account.
+  if(!currentUser)return localStorage.getItem('cg_profile');
+  return null;
+}
+function hasStoredProfile(){ return !!readStoredProfile(); }
+function writeStoredProfile(profile){
+  localStorage.setItem(profileStorageKey(),JSON.stringify(profile));
+  if(!currentUser)writeStoredProfile(profile);
+}
+function clearCurrentProfileCache(){ localStorage.removeItem(profileStorageKey()); }
+
 function getProfileFromForm(){
   const fd = new FormData($('#profileForm'));
   const obj = Object.fromEntries(fd.entries());
@@ -111,7 +129,7 @@ function getProfileFromForm(){
 }
 async function saveProfile(){
   const profile=getProfileFromForm();
-  localStorage.setItem('cg_profile',JSON.stringify(profile));
+  writeStoredProfile(profile);
   if(!supabaseClient || !currentUser){
     showToast('Profile saved on this device. Sign in to save it online.');
     return;
@@ -126,7 +144,7 @@ async function saveProfile(){
   showToast('Profile saved to your Common Ground account.');
 }
 function restoreProfile(){
-  const raw=localStorage.getItem('cg_profile');if(!raw)return;
+  const raw=readStoredProfile();if(!raw)return;
   const p=JSON.parse(raw),f=$('#profileForm');
   Object.entries(p).forEach(([k,v])=>{if(['personality','interests','deals'].includes(k))return;if(f.elements[k])f.elements[k].value=v});
   personalityTraits.forEach(t=>{if(p.personality?.[t.key]!==undefined){f.elements[t.key].value=p.personality[t.key];$(`#${t.key}Value`).textContent=p.personality[t.key];}});
@@ -267,13 +285,13 @@ async function loadProfileFromSupabase(){
   if(!supabaseClient||!currentUser)return;
   const {data,error}=await supabaseClient.from('profiles').select('*').eq('id',currentUser.id).maybeSingle();
   if(error){console.error(error);return;}
-  if(!data)return;
-  const p=dbToProfile(data);localStorage.setItem('cg_profile',JSON.stringify(p));restoreProfile();renderMatches();initVerificationUI();
+  if(!data){ clearCurrentProfileCache(); return; }
+  const p=dbToProfile(data);writeStoredProfile(p);restoreProfile();renderMatches();initVerificationUI();
   showToast('Your saved Common Ground profile was loaded.');
 }
 
 function getUserProfile(){
-  const raw=localStorage.getItem('cg_profile');
+  const raw=readStoredProfile();
   if(raw)return JSON.parse(raw);
   return {name:'You',age:30,area:'your area',radius:25,minAge:25,maxAge:40,goal:'Long-term relationship',conflict:'Take some space, then talk',social:'Balanced',planning:'Plan the important things',children:'I have children',alcohol:'Occasionally',nicotine:'Never',vaping:'Never',cannabis:'Never',dateDrinker:'Sometimes / depends',dateSmoker:'No',dateSober:'No preference',dateCannabis:'Sometimes / depends',interests:['Family time','Movies','Restaurants','Outdoors','Technology'],personality:{openness:70,conscientiousness:74,extraversion:50,agreeableness:78,emotionalStability:68},deals:{goal:true,smoking:false,vaping:false,alcohol:false,cannabis:false}};
 }
@@ -342,7 +360,7 @@ function reasons(u,m,result){
 }
 
 function renderMatches(){
-  const u=getUserProfile();const personalized=!!localStorage.getItem('cg_profile');
+  const u=getUserProfile();const personalized=hasStoredProfile();
   $('#matchIntro').textContent=personalized?`Matches for ${u.name}, ages ${u.minAge??18}–${u.maxAge??99}, ranked by compatibility — not popularity.`:'Complete your profile for personalized results. Until then, these use a balanced demo profile.';
   const scored=demoProfiles.map(m=>({m,r:calcMatch(u,m)})).filter(x=>!x.r.blocked).sort((a,b)=>b.r.score-a.r.score);
   const blocked=demoProfiles.length-scored.length;
@@ -570,11 +588,20 @@ async function loadRealMatchingData(force=false){
 
 function candidateAreaText(m){return m.area?escapeHTML(m.area):'General area not listed'}
 
+function matchingDiagnostic(u){
+  const rows=realCandidateProfiles.map(m=>({
+    name:m.name||'Member',
+    reason: realPasses.has(m.id) ? 'Previously passed' : (hardConflict(u,m)||'Eligible')
+  }));
+  const counts={total:rows.length,eligible:rows.filter(x=>x.reason==='Eligible').length,passed:rows.filter(x=>x.reason==='Previously passed').length};
+  return {rows,counts};
+}
+
 async function renderMatches(){
   const list=$('#matchList');
   if(!list)return;
   const u=getUserProfile();
-  const personalized=!!localStorage.getItem('cg_profile');
+  const personalized=hasStoredProfile();
 
   if(!currentUser){
     $('#matchIntro').textContent=personalized?`Demo matches for ${u.name}, ages ${u.minAge??18}–${u.maxAge??99}. Sign in to see real members.`:'Complete your profile for personalized demo results, then sign in to see real members.';
@@ -605,8 +632,9 @@ async function renderMatches(){
     .sort((a,b)=>b.r.score-a.r.score);
 
   if(!eligible.length){
-    const total=realCandidateProfiles.length;
-    list.innerHTML=`<div class="card mini"><h3>${total?'No new compatible profiles right now':'You’re ready for your first tester.'}</h3><p class="muted">${total?'Everyone currently registered is outside your preferences, already passed, or otherwise filtered.':'Your account is real, but another person needs to create and save a profile before a real match can appear.'}</p></div>`;
+    const d=matchingDiagnostic(u);
+    const detail=d.rows.length ? `<div class="filter-debug"><strong>What Common Ground found:</strong>${d.rows.map(x=>`<p class="muted"><strong>${escapeHTML(x.name)}:</strong> ${escapeHTML(x.reason)}</p>`).join('')}</div>` : '';
+    list.innerHTML=`<div class="card mini"><h3>${d.counts.total?'No compatible profiles are showing yet':'You’re ready for your first tester.'}</h3><p class="muted">${d.counts.total?'Another real profile exists, but it is currently being filtered. The reason is shown below so we can test safely.':'Another person needs to create an account and click Save & find matches so their profile is stored in Supabase.'}</p>${detail}</div>`;
     return;
   }
 
@@ -675,4 +703,135 @@ async function renderConversations(){
   if(!realMatchPartnerIds.size){wrap.innerHTML='<div class="card empty-messages"><h3>No mutual matches yet</h3><p class="muted">When you and another real member like each other, the match will appear here. Real-time chat comes next.</p><button class="primary" data-nav="matches">Browse real matches</button></div>';$$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));return;}
   const partners=realCandidateProfiles.filter(p=>realMatchPartnerIds.has(p.id));
   wrap.innerHTML=partners.map(p=>`<article class="card conversation-card"><div class="avatar small">${escapeHTML((p.name||'?')[0])}</div><div class="conversation-copy"><strong>${escapeHTML(p.name)}${verificationBadge(p,true)}</strong><span>Mutual match ✓</span><small>Real-time chat connection is the next build.</small></div><button class="secondary" disabled>Matched</button></article>`).join('');
+}
+
+
+// ===== v28: real Supabase text chat =====
+let activeRealChatMatchId=null;
+let activeRealChatPartnerId=null;
+let realChatPollTimer=null;
+
+function findMatchForPartner(partnerId){
+  return realMatchRows.find(m=>m.user_one===partnerId||m.user_two===partnerId)||null;
+}
+
+async function fetchMessagesForMatch(matchId){
+  if(!supabaseClient||!currentUser||!matchId)return [];
+  const {data,error}=await supabaseClient
+    .from('messages')
+    .select('id,match_id,sender_id,message_text,voice_url,voice_duration_seconds,created_at')
+    .eq('match_id',matchId)
+    .order('created_at',{ascending:true});
+  if(error){console.error('Message load failed',error);throw error;}
+  return data||[];
+}
+
+function realMessagePreview(msg){
+  if(!msg)return 'You matched — say hello.';
+  if(msg.message_text)return msg.message_text;
+  if(msg.voice_url)return 'Voice memo';
+  return 'New message';
+}
+
+async function renderConversations(){
+  const wrap=$('#conversationList');if(!wrap)return;
+  if(!currentUser){
+    wrap.innerHTML='<div class="card empty-messages"><h3>Sign in for real messages</h3><p class="muted">Real conversations unlock after a mutual match.</p><button class="primary" data-nav="auth">Sign in</button></div>';
+    $$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));return;
+  }
+  try{await loadRealMatchingData(true)}catch(e){wrap.innerHTML='<div class="card empty-messages"><h3>Matching setup needed</h3><p class="muted">Common Ground could not load your matches.</p></div>';return;}
+  if(!realMatchRows.length){
+    wrap.innerHTML='<div class="card empty-messages"><h3>No mutual matches yet</h3><p class="muted">When you and another member like each other, your conversation will appear here.</p><button class="primary" data-nav="matches">Browse real matches</button></div>';
+    $$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));return;
+  }
+  const matchIds=realMatchRows.map(m=>m.id);
+  let messages=[];
+  const {data,error}=await supabaseClient.from('messages').select('id,match_id,sender_id,message_text,voice_url,voice_duration_seconds,created_at').in('match_id',matchIds).order('created_at',{ascending:false});
+  if(!error)messages=data||[];
+  const lastByMatch=new Map();
+  for(const msg of messages){if(!lastByMatch.has(msg.match_id))lastByMatch.set(msg.match_id,msg);}
+  const rows=realMatchRows.map(match=>{
+    const partnerId=match.user_one===currentUser.id?match.user_two:match.user_one;
+    const partner=realCandidateProfiles.find(p=>p.id===partnerId);
+    return {match,partner,last:lastByMatch.get(match.id)};
+  }).filter(x=>x.partner).sort((a,b)=>new Date(b.last?.created_at||b.match.created_at||0)-new Date(a.last?.created_at||a.match.created_at||0));
+  wrap.innerHTML=rows.map(({match,partner,last})=>`<button class="conversation-row" data-real-chat-partner="${partner.id}"><div class="conversation-avatar">${escapeHTML((partner.name||'?')[0])}</div><div class="conversation-copy"><div class="conversation-top"><span class="conversation-name">${escapeHTML(partner.name)}${verificationBadge(partner,true)}</span><span class="conversation-time">${formatMessageTime(last?.created_at||match.created_at)}</span></div><div class="conversation-preview">${escapeHTML(realMessagePreview(last))}</div></div><span></span></button>`).join('');
+  $$('[data-real-chat-partner]').forEach(b=>b.addEventListener('click',()=>openRealChat(b.dataset.realChatPartner)));
+}
+
+async function openRealChat(partnerId){
+  if(!currentUser||!supabaseClient)return showScreen('auth');
+  await loadRealMatchingData(true);
+  const match=findMatchForPartner(partnerId);
+  const partner=realCandidateProfiles.find(p=>p.id===partnerId);
+  if(!match||!partner){showToast('This conversation is not available.');return;}
+  activeRealChatMatchId=match.id;
+  activeRealChatPartnerId=partnerId;
+  activeChatId=null;
+  $('#chatHeader').innerHTML=`<div class="conversation-avatar">${escapeHTML((partner.name||'?')[0])}</div><div><div class="chat-title">${escapeHTML(partner.name)}${verificationBadge(partner,true)}</div><div class="chat-subtitle">Mutual match through Common Ground${partner.area?' · '+escapeHTML(partner.area):''}</div></div>`;
+  const voiceBtn=$('#voiceMemoBtn');
+  if(voiceBtn){voiceBtn.disabled=true;voiceBtn.title='Real voice memos are coming next';voiceBtn.classList.remove('recording');}
+  setVoiceStatus('Text chat is live. Voice memos are the next connection step.',true);
+  await renderRealChatMessages();
+  showScreen('chat');
+  startRealChatPolling();
+}
+
+async function renderRealChatMessages(){
+  if(!activeRealChatMatchId||!currentUser)return;
+  const wrap=$('#chatMessages');
+  try{
+    const messages=await fetchMessagesForMatch(activeRealChatMatchId);
+    wrap.innerHTML=messages.length?messages.map(msg=>{
+      const mine=msg.sender_id===currentUser.id;
+      if(msg.voice_url){
+        return `<div class="message-row ${mine?'mine':''}"><div class="message-bubble voice-bubble"><div class="voice-label">🎙 Voice memo</div><audio controls preload="metadata" src="${escapeHTML(msg.voice_url)}"></audio><span class="message-meta">${formatMessageTime(msg.created_at)}</span></div></div>`;
+      }
+      return `<div class="message-row ${mine?'mine':''}"><div class="message-bubble">${escapeHTML(msg.message_text||'')}<span class="message-meta">${formatMessageTime(msg.created_at)}</span></div></div>`;
+    }).join(''):'<div class="empty-messages"><p class="muted">You matched. Say hello when you’re ready.</p></div>';
+    requestAnimationFrame(()=>{wrap.scrollTop=wrap.scrollHeight});
+  }catch(err){wrap.innerHTML='<div class="empty-messages"><p class="muted">Could not load messages. Refresh and try again.</p></div>';}
+}
+
+function startRealChatPolling(){
+  clearInterval(realChatPollTimer);
+  realChatPollTimer=setInterval(async()=>{
+    const chat=$('#chat');
+    if(!chat?.classList.contains('active')||!activeRealChatMatchId){clearInterval(realChatPollTimer);realChatPollTimer=null;return;}
+    await renderRealChatMessages();
+  },3000);
+}
+
+async function sendRealTextMessage(text){
+  if(!activeRealChatMatchId||!currentUser||!supabaseClient)return;
+  const {error}=await supabaseClient.from('messages').insert({
+    match_id:activeRealChatMatchId,
+    sender_id:currentUser.id,
+    message_text:text
+  });
+  if(error){console.error('Message send failed',error);showToast(`Message failed: ${error.message}`);return false;}
+  return true;
+}
+
+function bindChat(){
+  const form=$('#chatForm');if(!form)return;
+  const voiceBtn=$('#voiceMemoBtn');
+  if(voiceBtn)voiceBtn.addEventListener('click',()=>{
+    if(activeRealChatMatchId){setVoiceStatus('Real voice memos are coming next. Text chat is live now.',true);return;}
+    toggleVoiceRecording();
+  });
+  form.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const input=$('#chatInput');const text=input.value.trim();if(!text)return;
+    if(activeRealChatMatchId){
+      input.disabled=true;
+      const ok=await sendRealTextMessage(text);
+      input.disabled=false;input.focus();
+      if(ok){input.value='';await renderRealChatMessages();await renderConversations();}
+      return;
+    }
+    if(activeChatId===null)return;
+    const data=getConversations();const key=String(activeChatId);if(!data[key])data[key]={profileId:activeChatId,unread:false,messages:[]};
+    data[key].messages.push({from:'me',text,time:Date.now()});saveConversations(data);input.value='';renderChatMessages();
+  });
 }

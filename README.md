@@ -1,14 +1,11 @@
-# Common Ground v26
+# Common Ground v28 — Real Text Chat
 
-This build adds real Supabase profile discovery, Like / Pass, and mutual matching.
+This build adds real cross-device text messaging for mutual matches using the Supabase `messages` table.
 
-## Before uploading v26 to GitHub
-1. Open Supabase > SQL Editor.
-2. Paste and run `SUPABASE-v26.sql` once.
-3. Confirm Success.
-4. Upload the app files to GitHub Pages.
-5. Open the live site with `?v=26`.
+## Test
+1. Sign in as one matched account and open Messages.
+2. Open the mutual match and send a text.
+3. Sign in as the other account (or use another browser/device).
+4. Open Messages. The text should appear.
 
-Signed-in users see real Supabase profiles only. Signed-out users can still see demo profiles. A mutual match is created only when both real users Like each other.
-
-Real-time text/voice chat is the next build; this version shows mutual matches in Messages but does not yet send cross-device messages.
+Voice memos remain the next step; the microphone is disabled in real chats in v28 so it cannot imply a voice memo was sent when it was not.
