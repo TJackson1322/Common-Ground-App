@@ -1,4 +1,4 @@
-console.info('Common Ground build v29 real chat');
+console.info('Common Ground build v31 real voice memos');
 const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
 let supabaseClient = null;
@@ -699,6 +699,7 @@ async function passRealUser(targetId){
 let activeRealChatMatchId=null;
 let activeRealChatPartnerId=null;
 let realChatPollTimer=null;
+const realVoiceUrlCache=new Map();
 
 function findMatchForPartner(partnerId){
   return realMatchRows.find(m=>m.user_one===partnerId||m.user_two===partnerId)||null;
@@ -759,11 +760,96 @@ async function openRealChat(partnerId){
   activeChatId=null;
   $('#chatHeader').innerHTML=`<div class="conversation-avatar">${escapeHTML((partner.name||'?')[0])}</div><div><div class="chat-title">${escapeHTML(partner.name)}${verificationBadge(partner,true)}</div><div class="chat-subtitle">Mutual match through Common Ground${partner.area?' · '+escapeHTML(partner.area):''}</div></div>`;
   const voiceBtn=$('#voiceMemoBtn');
-  if(voiceBtn){voiceBtn.disabled=true;voiceBtn.title='Real voice memos are coming next';voiceBtn.classList.remove('recording');}
-  setVoiceStatus('Text chat is live. Voice memos are the next connection step.',true);
+  if(voiceBtn){voiceBtn.disabled=false;voiceBtn.title='Record voice memo';voiceBtn.classList.remove('recording');}
+  setVoiceStatus('',false);
   await renderRealChatMessages();
   showScreen('chat');
   startRealChatPolling();
+}
+
+
+async function getRealVoicePlaybackUrl(path){
+  if(!path||!supabaseClient)return '';
+  if(/^https?:\/\//i.test(path))return path;
+  const cached=realVoiceUrlCache.get(path);
+  if(cached&&cached.expires>Date.now()+30000)return cached.url;
+  const {data,error}=await supabaseClient.storage.from('voice-memos').createSignedUrl(path,3600);
+  if(error){console.error('Voice URL failed',error);return '';}
+  const url=data?.signedUrl||'';
+  if(url)realVoiceUrlCache.set(path,{url,expires:Date.now()+55*60*1000});
+  return url;
+}
+
+async function uploadRealVoiceMemo(blob,durationSeconds){
+  if(!activeRealChatMatchId||!currentUser||!supabaseClient)throw new Error('No active mutual match.');
+  const mime=blob.type||'audio/webm';
+  let ext='webm';
+  if(mime.includes('mp4')||mime.includes('m4a'))ext='m4a';
+  else if(mime.includes('ogg'))ext='ogg';
+  else if(mime.includes('wav'))ext='wav';
+  const fileName=`${Date.now()}-${crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)}.${ext}`;
+  const path=`${activeRealChatMatchId}/${currentUser.id}/${fileName}`;
+  const {error:uploadError}=await supabaseClient.storage.from('voice-memos').upload(path,blob,{contentType:mime,upsert:false,cacheControl:'3600'});
+  if(uploadError)throw uploadError;
+  const {error:messageError}=await supabaseClient.from('messages').insert({
+    match_id:activeRealChatMatchId,
+    sender_id:currentUser.id,
+    voice_url:path,
+    voice_duration_seconds:Math.max(1,Math.round(durationSeconds||1))
+  });
+  if(messageError){
+    await supabaseClient.storage.from('voice-memos').remove([path]).catch(()=>{});
+    throw messageError;
+  }
+  return path;
+}
+
+async function toggleRealVoiceRecording(){
+  const btn=$('#voiceMemoBtn');
+  if(!activeRealChatMatchId||!currentUser)return;
+  if(mediaRecorder&&mediaRecorder.state==='recording'){
+    mediaRecorder.stop();
+    btn?.classList.remove('recording');
+    return;
+  }
+  if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){
+    setVoiceStatus('Voice recording is not supported in this browser. Try current Safari or Chrome.',true);
+    setTimeout(()=>setVoiceStatus('',false),4500);
+    return;
+  }
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    voiceChunks=[];
+    let options={};
+    if(MediaRecorder.isTypeSupported?.('audio/webm;codecs=opus'))options={mimeType:'audio/webm;codecs=opus'};
+    else if(MediaRecorder.isTypeSupported?.('audio/mp4'))options={mimeType:'audio/mp4'};
+    mediaRecorder=new MediaRecorder(stream,options);
+    mediaRecorder.ondataavailable=e=>{if(e.data&&e.data.size)voiceChunks.push(e.data)};
+    mediaRecorder.onstop=async()=>{
+      clearInterval(voiceTimer);voiceTimer=null;
+      const duration=(Date.now()-voiceStartedAt)/1000;voiceStartedAt=0;
+      stream.getTracks().forEach(t=>t.stop());
+      const blob=new Blob(voiceChunks,{type:mediaRecorder.mimeType||'audio/webm'});
+      if(!blob.size){setVoiceStatus('No audio was recorded.',true);setTimeout(()=>setVoiceStatus('',false),2500);return;}
+      try{
+        setVoiceStatus('Sending voice memo…',true);
+        await uploadRealVoiceMemo(blob,duration);
+        setVoiceStatus('Voice memo sent.',true);
+        await renderRealChatMessages();
+        await renderConversations();
+        setTimeout(()=>setVoiceStatus('',false),1600);
+      }catch(err){
+        console.error('Voice memo send failed',err);
+        setVoiceStatus(`Voice memo failed: ${err.message||'try again.'}`,true);
+      }
+    };
+    mediaRecorder.start();voiceStartedAt=Date.now();btn?.classList.add('recording');
+    updateVoiceTimer();voiceTimer=setInterval(updateVoiceTimer,1000);
+  }catch(err){
+    console.error(err);
+    setVoiceStatus('Microphone access is needed to record a voice memo.',true);
+    setTimeout(()=>setVoiceStatus('',false),4000);
+  }
 }
 
 async function renderRealChatMessages(){
@@ -771,13 +857,18 @@ async function renderRealChatMessages(){
   const wrap=$('#chatMessages');
   try{
     const messages=await fetchMessagesForMatch(activeRealChatMatchId);
-    wrap.innerHTML=messages.length?messages.map(msg=>{
+    const rows=[];
+    for(const msg of messages){
       const mine=msg.sender_id===currentUser.id;
       if(msg.voice_url){
-        return `<div class="message-row ${mine?'mine':''}"><div class="message-bubble voice-bubble"><div class="voice-label">🎙 Voice memo</div><audio controls preload="metadata" src="${escapeHTML(msg.voice_url)}"></audio><span class="message-meta">${formatMessageTime(msg.created_at)}</span></div></div>`;
+        const playback=await getRealVoicePlaybackUrl(msg.voice_url);
+        const dur=msg.voice_duration_seconds?formatDuration(msg.voice_duration_seconds):'Voice memo';
+        rows.push(`<div class="message-row ${mine?'mine':''}"><div class="message-bubble voice-bubble"><div class="voice-label">🎙 Voice memo <span>${escapeHTML(dur)}</span></div>${playback?`<audio controls preload="metadata" src="${escapeHTML(playback)}"></audio>`:'<div class="muted">Audio unavailable</div>'}<span class="message-meta">${formatMessageTime(msg.created_at)}</span></div></div>`);
+      }else{
+        rows.push(`<div class="message-row ${mine?'mine':''}"><div class="message-bubble">${escapeHTML(msg.message_text||'')}<span class="message-meta">${formatMessageTime(msg.created_at)}</span></div></div>`);
       }
-      return `<div class="message-row ${mine?'mine':''}"><div class="message-bubble">${escapeHTML(msg.message_text||'')}<span class="message-meta">${formatMessageTime(msg.created_at)}</span></div></div>`;
-    }).join(''):'<div class="empty-messages"><p class="muted">You matched. Say hello when you’re ready.</p></div>';
+    }
+    wrap.innerHTML=rows.length?rows.join(''):'<div class="empty-messages"><p class="muted">You matched. Say hello when you’re ready.</p></div>';
     requestAnimationFrame(()=>{wrap.scrollTop=wrap.scrollHeight});
   }catch(err){wrap.innerHTML='<div class="empty-messages"><p class="muted">Could not load messages. Refresh and try again.</p></div>';}
 }
@@ -806,7 +897,7 @@ function bindChat(){
   const form=$('#chatForm');if(!form)return;
   const voiceBtn=$('#voiceMemoBtn');
   if(voiceBtn)voiceBtn.addEventListener('click',()=>{
-    if(activeRealChatMatchId){setVoiceStatus('Real voice memos are coming next. Text chat is live now.',true);return;}
+    if(activeRealChatMatchId){toggleRealVoiceRecording();return;}
     toggleVoiceRecording();
   });
   form.addEventListener('submit',async e=>{
