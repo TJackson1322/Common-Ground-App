@@ -1,3 +1,4 @@
+-- Common Ground v32 voice storage. App normalizes browser MIME types before upload.
 -- Common Ground v30: private voice memo storage
 -- Run once in Supabase SQL Editor.
 

@@ -1,4 +1,4 @@
-console.info('Common Ground build v31 real voice memos');
+console.info('Common Ground build v32 real voice memos');
 const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
 let supabaseClient = null;
@@ -515,7 +515,8 @@ async function toggleVoiceRecording(){
       reader.readAsDataURL(blob);
     };
     mediaRecorder.start();voiceStartedAt=Date.now();btn?.classList.add('recording');
-    updateVoiceTimer();voiceTimer=setInterval(updateVoiceTimer,1000);
+    setVoiceStatus('Recording… tap the microphone again to send',true);
+    updateVoiceTimer();voiceTimer=setInterval(()=>{updateVoiceTimer();if(voiceStartedAt && Date.now()-voiceStartedAt>60000 && mediaRecorder?.state==='recording'){mediaRecorder.stop();}},1000);
   }catch(err){
     setVoiceStatus('Microphone access is needed to record a voice memo.',true);
     setTimeout(()=>setVoiceStatus('',false),4000);
@@ -782,7 +783,8 @@ async function getRealVoicePlaybackUrl(path){
 
 async function uploadRealVoiceMemo(blob,durationSeconds){
   if(!activeRealChatMatchId||!currentUser||!supabaseClient)throw new Error('No active mutual match.');
-  const mime=blob.type||'audio/webm';
+  const rawMime=blob.type||'audio/webm';
+  const mime=(rawMime.split(';')[0]||'audio/webm').trim().toLowerCase();
   let ext='webm';
   if(mime.includes('mp4')||mime.includes('m4a'))ext='m4a';
   else if(mime.includes('ogg'))ext='ogg';
@@ -844,7 +846,8 @@ async function toggleRealVoiceRecording(){
       }
     };
     mediaRecorder.start();voiceStartedAt=Date.now();btn?.classList.add('recording');
-    updateVoiceTimer();voiceTimer=setInterval(updateVoiceTimer,1000);
+    setVoiceStatus('Recording… tap the microphone again to send',true);
+    updateVoiceTimer();voiceTimer=setInterval(()=>{updateVoiceTimer();if(voiceStartedAt && Date.now()-voiceStartedAt>60000 && mediaRecorder?.state==='recording'){mediaRecorder.stop();}},1000);
   }catch(err){
     console.error(err);
     setVoiceStatus('Microphone access is needed to record a voice memo.',true);
