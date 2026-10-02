@@ -543,7 +543,7 @@ function suggestDate(u,m,shared){
 }
 
 function registerPwa(){
-  if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=20').catch(()=>{}));
+  if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=33').catch(()=>{}));
   window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;$('#installBtn').classList.remove('hidden');});
   $('#installBtn').addEventListener('click',async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$('#installBtn').classList.add('hidden');});
 }
@@ -557,6 +557,7 @@ let realLikes=new Set();
 let realPasses=new Set();
 let realMatchPartnerIds=new Set();
 let realMatchRows=[];
+let blockedUserIds=new Set();
 let matchingLoadPromise=null;
 
 function dbRowToCandidate(r){
@@ -568,21 +569,23 @@ async function loadRealMatchingData(force=false){
   if(!supabaseClient||!currentUser)return;
   if(matchingLoadPromise&&!force)return matchingLoadPromise;
   matchingLoadPromise=(async()=>{
-    const [profilesRes,likesRes,passesRes,matchesRes]=await Promise.all([
+    const [profilesRes,likesRes,passesRes,matchesRes,blocksRes]=await Promise.all([
       supabaseClient.from('profiles').select('*').neq('id',currentUser.id),
       supabaseClient.from('likes').select('to_user').eq('from_user',currentUser.id),
       supabaseClient.from('passes').select('to_user').eq('from_user',currentUser.id),
-      supabaseClient.from('matches').select('*').or(`user_one.eq.${currentUser.id},user_two.eq.${currentUser.id}`)
+      supabaseClient.from('matches').select('*').or(`user_one.eq.${currentUser.id},user_two.eq.${currentUser.id}`),
+      supabaseClient.from('blocks').select('blocker_id,blocked_id').or(`blocker_id.eq.${currentUser.id},blocked_id.eq.${currentUser.id}`)
     ]);
-    const firstErr=profilesRes.error||likesRes.error||passesRes.error||matchesRes.error;
+    const firstErr=profilesRes.error||likesRes.error||passesRes.error||matchesRes.error||blocksRes.error;
     if(firstErr){
       console.error('Real matching load failed',firstErr);
       throw firstErr;
     }
-    realCandidateProfiles=(profilesRes.data||[]).map(dbRowToCandidate);
-    realLikes=new Set((likesRes.data||[]).map(x=>x.to_user));
+    blockedUserIds=new Set((blocksRes.data||[]).map(b=>b.blocker_id===currentUser.id?b.blocked_id:b.blocker_id));
+    realCandidateProfiles=(profilesRes.data||[]).map(dbRowToCandidate).filter(p=>!blockedUserIds.has(p.id));
+    realLikes=new Set((likesRes.data||[]).map(x=>x.to_user).filter(id=>!blockedUserIds.has(id)));
     realPasses=new Set((passesRes.data||[]).map(x=>x.to_user));
-    realMatchRows=matchesRes.data||[];
+    realMatchRows=(matchesRes.data||[]).filter(m=>{const partner=m.user_one===currentUser.id?m.user_two:m.user_one;return !blockedUserIds.has(partner);});
     realMatchPartnerIds=new Set(realMatchRows.map(m=>m.user_one===currentUser.id?m.user_two:m.user_one));
   })().finally(()=>{matchingLoadPromise=null;});
   return matchingLoadPromise;
@@ -755,11 +758,13 @@ async function openRealChat(partnerId){
   await loadRealMatchingData(true);
   const match=findMatchForPartner(partnerId);
   const partner=realCandidateProfiles.find(p=>p.id===partnerId);
-  if(!match||!partner){showToast('This conversation is not available.');return;}
+  if(!match||!partner||blockedUserIds.has(partnerId)){showToast('This conversation is not available.');return;}
   activeRealChatMatchId=match.id;
   activeRealChatPartnerId=partnerId;
   activeChatId=null;
-  $('#chatHeader').innerHTML=`<div class="conversation-avatar">${escapeHTML((partner.name||'?')[0])}</div><div><div class="chat-title">${escapeHTML(partner.name)}${verificationBadge(partner,true)}</div><div class="chat-subtitle">Mutual match through Common Ground${partner.area?' · '+escapeHTML(partner.area):''}</div></div>`;
+  $('#chatHeader').innerHTML=`<div class="conversation-avatar">${escapeHTML((partner.name||'?')[0])}</div><div class="chat-person"><div class="chat-title">${escapeHTML(partner.name)}${verificationBadge(partner,true)}</div><div class="chat-subtitle">Mutual match through Common Ground${partner.area?' · '+escapeHTML(partner.area):''}</div></div><div class="chat-safety-actions"><button class="ghost danger-lite" id="reportUserBtn" type="button">Report</button><button class="ghost danger-lite" id="blockUserBtn" type="button">Block</button></div>`;
+  $('#reportUserBtn')?.addEventListener('click',()=>reportRealUser(partnerId,partner.name));
+  $('#blockUserBtn')?.addEventListener('click',()=>blockRealUser(partnerId,partner.name));
   const voiceBtn=$('#voiceMemoBtn');
   if(voiceBtn){voiceBtn.disabled=false;voiceBtn.title='Record voice memo';voiceBtn.classList.remove('recording');}
   setVoiceStatus('',false);
@@ -855,6 +860,37 @@ async function toggleRealVoiceRecording(){
   }
 }
 
+
+async function blockRealUser(targetId,targetName='this member'){
+  if(!currentUser||!supabaseClient)return;
+  if(!confirm(`Block ${targetName}? They will disappear from your matches and messages, and neither of you will be able to message the other.`))return;
+  const {error}=await supabaseClient.from('blocks').upsert({blocker_id:currentUser.id,blocked_id:targetId},{onConflict:'blocker_id,blocked_id'});
+  if(error){console.error('Block failed',error);showToast(`Block failed: ${error.message}`);return;}
+  blockedUserIds.add(targetId);
+  activeRealChatMatchId=null;activeRealChatPartnerId=null;
+  showToast(`${targetName} blocked.`);
+  await loadRealMatchingData(true).catch(()=>{});
+  await renderConversations();
+  showScreen('messages');
+}
+
+async function reportRealUser(targetId,targetName='this member'){
+  if(!currentUser||!supabaseClient)return;
+  const reason=prompt(`Report ${targetName}
+
+Briefly tell us the reason (harassment, fake identity, inappropriate content, safety concern, spam, other):`);
+  if(!reason||!reason.trim())return;
+  const details=prompt('Optional: add any details that would help review this report.')||'';
+  const {error}=await supabaseClient.from('reports').insert({
+    reporter_id:currentUser.id,
+    reported_id:targetId,
+    reason:reason.trim().slice(0,200),
+    details:details.trim().slice(0,2000)
+  });
+  if(error){console.error('Report failed',error);showToast(`Report failed: ${error.message}`);return;}
+  showToast('Report submitted. Thank you for helping keep Common Ground safer.');
+}
+
 async function renderRealChatMessages(){
   if(!activeRealChatMatchId||!currentUser)return;
   const wrap=$('#chatMessages');
@@ -887,6 +923,7 @@ function startRealChatPolling(){
 
 async function sendRealTextMessage(text){
   if(!activeRealChatMatchId||!currentUser||!supabaseClient)return;
+  if(activeRealChatPartnerId&&blockedUserIds.has(activeRealChatPartnerId)){showToast('Messaging is unavailable for this user.');return false;}
   const {error}=await supabaseClient.from('messages').insert({
     match_id:activeRealChatMatchId,
     sender_id:currentUser.id,
