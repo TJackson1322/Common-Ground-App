@@ -19,6 +19,7 @@ const demoProfiles = [
 let step = 1;
 let selectedInterests = new Set();
 let deferredPrompt = null;
+let activeChatId = null;
 
 function $(sel){return document.querySelector(sel)}
 function $$(sel){return [...document.querySelectorAll(sel)]}
@@ -28,9 +29,12 @@ function init(){
   renderInterests();
   restoreProfile();
   renderMatches();
+  seedDemoConversations();
+  renderConversations();
   bindNav();
   bindForm();
   registerPwa();
+  bindChat();
 }
 
 function renderPersonality(){
@@ -52,6 +56,7 @@ function showScreen(id){
   $(`#${id}`).classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
   if(id==='matches') renderMatches();
+  if(id==='messages') renderConversations();
 }
 
 function bindForm(){
@@ -172,9 +177,81 @@ function showDetail(id){
   const u=getUserProfile(),m=demoProfiles.find(x=>x.id===id),r=calcMatch(u,m);if(!m||r.blocked)return;
   const shared=m.interests.filter(i=>(u.interests||[]).includes(i));
   const date=suggestDate(u,m,shared);
-  $('#matchDetailContent').innerHTML=`<div class="detail-grid"><article class="card detail-card"><span class="eyebrow">Compatibility</span><div class="score-big">${r.score}%</div><h2>${m.name}, ${m.age}</h2><p class="muted">${m.area} · about ${m.distance} miles away</p><p>${m.bio}</p><div class="tag-row">${m.interests.slice(0,6).map(i=>`<span class="tag">${i}</span>`).join('')}</div></article><article class="card detail-card"><span class="eyebrow">Why you two?</span><h2>There’s real overlap here.</h2><ul class="why-list">${reasons(u,m,r).map(x=>`<li>${x}</li>`).join('')}</ul><div class="compat-bars">${Object.entries(r.parts).map(([k,v])=>`<div class="bar-row"><span>${k}</span><div class="bar"><span style="width:${v}%"></span></div><strong>${v}</strong></div>`).join('')}</div></article></div><div class="detail-grid" style="margin-top:18px"><article class="card detail-card"><span class="eyebrow">Lifestyle snapshot</span><h3>${m.alcohol}</h3><p>Alcohol · ${m.nicotine} nicotine · ${m.cannabis} cannabis</p><p class="muted">Lifestyle answers are used for compatibility only. The app does not treat sobriety, abstinence, or substance use as a measure of character.</p></article><article class="date-box"><span class="eyebrow" style="color:#9da7b6">Suggested first date</span><h2>${date.title}</h2><p>${date.text}</p><strong>${date.cost}</strong></article></div>`;
+  $('#matchDetailContent').innerHTML=`<div class="detail-grid"><article class="card detail-card"><span class="eyebrow">Compatibility</span><div class="score-big">${r.score}%</div><h2>${m.name}, ${m.age}</h2><p class="muted">${m.area} · about ${m.distance} miles away</p><p>${m.bio}</p><div class="tag-row">${m.interests.slice(0,6).map(i=>`<span class="tag">${i}</span>`).join('')}</div><div class="match-actions"><button class="primary" data-message-match="${m.id}">Message</button><button class="secondary" data-nav="matches">Back to matches</button></div></article><article class="card detail-card"><span class="eyebrow">Why you two?</span><h2>There’s real overlap here.</h2><ul class="why-list">${reasons(u,m,r).map(x=>`<li>${x}</li>`).join('')}</ul><div class="compat-bars">${Object.entries(r.parts).map(([k,v])=>`<div class="bar-row"><span>${k}</span><div class="bar"><span style="width:${v}%"></span></div><strong>${v}</strong></div>`).join('')}</div></article></div><div class="detail-grid" style="margin-top:18px"><article class="card detail-card"><span class="eyebrow">Lifestyle snapshot</span><h3>${m.alcohol}</h3><p>Alcohol · ${m.nicotine} nicotine · ${m.cannabis} cannabis</p><p class="muted">Lifestyle answers are used for compatibility only. The app does not treat sobriety, abstinence, or substance use as a measure of character.</p></article><article class="date-box"><span class="eyebrow" style="color:#d7bf8c">Suggested first date</span><h2>${date.title}</h2><p>${date.text}</p><strong>${date.cost}</strong></article></div>`;
   showScreen('matchDetail');
+  $$('[data-message-match]').forEach(b=>b.addEventListener('click',()=>openChat(Number(b.dataset.messageMatch))));
+  $$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
 }
+
+function escapeHTML(value){
+  return String(value ?? '').replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+}
+function getConversations(){
+  try{return JSON.parse(localStorage.getItem('cg_conversations')||'{}')}catch{return {}}
+}
+function saveConversations(data){localStorage.setItem('cg_conversations',JSON.stringify(data));}
+function seedDemoConversations(){
+  const data=getConversations();
+  if(Object.keys(data).length)return;
+  const now=Date.now();
+  data['1']={profileId:1,unread:false,messages:[
+    {from:'them',text:'Hey! Looks like we have a lot in common. Racing and good food is a pretty solid start 😄',time:now-1000*60*48},
+    {from:'me',text:'Definitely. I like that the app actually explains why we matched.',time:now-1000*60*42}
+  ]};
+  data['4']={profileId:4,unread:true,messages:[
+    {from:'them',text:'Hi! I saw we both put family time pretty high on our list. How is your week going?',time:now-1000*60*18}
+  ]};
+  saveConversations(data);
+}
+function ensureConversation(profileId){
+  const data=getConversations();
+  const key=String(profileId);
+  if(!data[key])data[key]={profileId,unread:false,messages:[]};
+  saveConversations(data);
+  return data[key];
+}
+function renderConversations(){
+  const wrap=$('#conversationList');if(!wrap)return;
+  const data=getConversations();
+  const rows=Object.values(data).map(c=>{
+    const m=demoProfiles.find(x=>x.id===Number(c.profileId));
+    const last=c.messages?.[c.messages.length-1];
+    return {c,m,last};
+  }).filter(x=>x.m).sort((a,b)=>(b.last?.time||0)-(a.last?.time||0));
+  if(!rows.length){wrap.innerHTML='<div class="card empty-messages"><h3>No messages yet</h3><p class="muted">When you and someone mutually match, your conversation will appear here.</p><button class="primary" data-nav="matches">Browse matches</button></div>';$$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));return;}
+  wrap.innerHTML=rows.map(({c,m,last})=>`<button class="conversation-row" data-chat-id="${m.id}"><div class="conversation-avatar">${escapeHTML(m.name[0])}</div><div class="conversation-copy"><div class="conversation-top"><span class="conversation-name">${escapeHTML(m.name)}</span><span class="conversation-time">${formatMessageTime(last?.time)}</span></div><div class="conversation-preview">${escapeHTML(last?.text||'You matched — say hello.')}</div></div>${c.unread?'<span class="unread-dot" aria-label="Unread"></span>':'<span></span>'}</button>`).join('');
+  $$('[data-chat-id]').forEach(b=>b.addEventListener('click',()=>openChat(Number(b.dataset.chatId))));
+}
+function formatMessageTime(ts){
+  if(!ts)return '';
+  const d=new Date(ts),now=new Date();
+  if(d.toDateString()===now.toDateString())return d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+  return d.toLocaleDateString([],{month:'short',day:'numeric'});
+}
+function openChat(profileId){
+  const m=demoProfiles.find(x=>x.id===Number(profileId));if(!m)return;
+  ensureConversation(profileId);activeChatId=Number(profileId);
+  const data=getConversations();data[String(profileId)].unread=false;saveConversations(data);
+  $('#chatHeader').innerHTML=`<div class="conversation-avatar">${escapeHTML(m.name[0])}</div><div><div class="chat-title">${escapeHTML(m.name)}</div><div class="chat-subtitle">Matched through Common Ground · ${escapeHTML(m.area)}</div></div>`;
+  renderChatMessages();showScreen('chat');
+}
+function renderChatMessages(){
+  if(activeChatId===null)return;
+  const wrap=$('#chatMessages');const data=getConversations();const c=data[String(activeChatId)];
+  const messages=c?.messages||[];
+  wrap.innerHTML=messages.length?messages.map(msg=>`<div class="message-row ${msg.from==='me'?'mine':''}"><div class="message-bubble">${escapeHTML(msg.text)}<span class="message-meta">${formatMessageTime(msg.time)}</span></div></div>`).join(''):'<div class="empty-messages"><p class="muted">You matched. Say hello when you’re ready.</p></div>';
+  requestAnimationFrame(()=>{wrap.scrollTop=wrap.scrollHeight});
+}
+function bindChat(){
+  const form=$('#chatForm');if(!form)return;
+  form.addEventListener('submit',e=>{
+    e.preventDefault();
+    const input=$('#chatInput');const text=input.value.trim();if(!text||activeChatId===null)return;
+    const data=getConversations();const key=String(activeChatId);if(!data[key])data[key]={profileId:activeChatId,unread:false,messages:[]};
+    data[key].messages.push({from:'me',text,time:Date.now()});saveConversations(data);input.value='';renderChatMessages();
+  });
+}
+
 function suggestDate(u,m,shared){
   const under21=Number(u.age)<21 || Number(m.age)<21;
   if(shared.includes('Coffee shops'))return {title:'Coffee + a walk',text:'Meet at a busy coffee shop, then take a short walk somewhere public if you both want to keep talking.',cost:'Estimated: $10–20'};
