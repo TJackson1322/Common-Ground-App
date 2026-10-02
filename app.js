@@ -762,7 +762,7 @@ async function openRealChat(partnerId){
   activeRealChatMatchId=match.id;
   activeRealChatPartnerId=partnerId;
   activeChatId=null;
-  $('#chatHeader').innerHTML=`<div class="conversation-avatar">${escapeHTML((partner.name||'?')[0])}</div><div class="chat-person"><div class="chat-title">${escapeHTML(partner.name)}${verificationBadge(partner,true)}</div><div class="chat-subtitle">Mutual match through Common Ground${partner.area?' · '+escapeHTML(partner.area):''}</div></div><div class="chat-safety-actions"><button class="ghost danger-lite" id="reportUserBtn" type="button">Report</button><button class="ghost danger-lite" id="blockUserBtn" type="button">Block</button></div>`;
+  $('#chatHeader').innerHTML=`<div class="conversation-avatar">${escapeHTML((partner.name||'?')[0])}</div><div class="chat-person"><div class="chat-title">${escapeHTML(partner.name)}${verificationBadge(partner,true)}</div><div class="chat-subtitle">Mutual match through Common Ground${partner.area?' · '+escapeHTML(partner.area):''}</div><div class="chat-safety-actions"><button class="ghost danger-lite" id="reportUserBtn" type="button">Report</button><button class="ghost danger-lite" id="blockUserBtn" type="button">Block</button></div></div>`;
   $('#reportUserBtn')?.addEventListener('click',()=>reportRealUser(partnerId,partner.name));
   $('#blockUserBtn')?.addEventListener('click',()=>blockRealUser(partnerId,partner.name));
   const voiceBtn=$('#voiceMemoBtn');

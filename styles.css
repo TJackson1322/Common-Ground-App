@@ -383,3 +383,8 @@ textarea{min-height:100px;resize:vertical}
 /* v33 safety controls */
 .chat-header{display:flex;align-items:center;gap:14px}.chat-person{min-width:0;flex:1}.chat-safety-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}.danger-lite{border:1px solid #d9c6b5!important;background:#fffaf4!important;color:#6b4036!important;padding:9px 12px!important}.danger-lite:hover{background:#f4e6de!important}.safety-note{font-size:12px;color:var(--muted);line-height:1.5}
 @media(max-width:760px){.chat-header{align-items:flex-start;flex-wrap:wrap}.chat-safety-actions{width:100%;margin-left:0;justify-content:flex-end}}
+
+/* v34 visible safety actions */
+.chat-safety-actions{margin:10px 0 0!important;display:flex!important;gap:8px!important;flex-wrap:wrap!important;justify-content:flex-start!important;width:auto!important}
+.chat-safety-actions .danger-lite{display:inline-flex!important;align-items:center;justify-content:center;min-width:78px}
+@media(max-width:760px){.chat-safety-actions{justify-content:flex-start!important}}
