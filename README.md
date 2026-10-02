@@ -1,11 +1,6 @@
-# Common Ground v28 — Real Text Chat
+# Common Ground v29
 
-This build adds real cross-device text messaging for mutual matches using the Supabase `messages` table.
+Real accounts, real matching, and real Supabase text chat.
 
-## Test
-1. Sign in as one matched account and open Messages.
-2. Open the mutual match and send a text.
-3. Sign in as the other account (or use another browser/device).
-4. Open Messages. The text should appear.
-
-Voice memos remain the next step; the microphone is disabled in real chats in v28 so it cannot imply a voice memo was sent when it was not.
+This build uses app.js?v=29 and styles.css?v=29 to avoid stale browser assets.
+Voice memo upload/storage is the next step after real text chat is verified.

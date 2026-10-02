@@ -1,3 +1,4 @@
+console.info('Common Ground build v29 real chat');
 const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
 let supabaseClient = null;
@@ -426,7 +427,7 @@ function ensureConversation(profileId){
   saveConversations(data);
   return data[key];
 }
-function renderConversations(){
+function renderDemoConversations(){
   const wrap=$('#conversationList');if(!wrap)return;
   const data=getConversations();
   const rows=Object.values(data).map(c=>{
@@ -520,7 +521,7 @@ async function toggleVoiceRecording(){
     setTimeout(()=>setVoiceStatus('',false),4000);
   }
 }
-function bindChat(){
+function bindDemoChat(){
   const form=$('#chatForm');if(!form)return;
   const voiceBtn=$('#voiceMemoBtn');if(voiceBtn)voiceBtn.addEventListener('click',toggleVoiceRecording);
   form.addEventListener('submit',e=>{
@@ -693,20 +694,8 @@ async function passRealUser(targetId){
   showScreen('matches');
 }
 
-async function renderConversations(){
-  const wrap=$('#conversationList');if(!wrap)return;
-  if(!currentUser){
-    wrap.innerHTML='<div class="card empty-messages"><h3>Sign in for real messages</h3><p class="muted">Real conversations will unlock after a mutual match.</p><button class="primary" data-nav="auth">Sign in</button></div>';
-    $$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));return;
-  }
-  try{await loadRealMatchingData(true)}catch(e){wrap.innerHTML='<div class="card empty-messages"><h3>Matching setup needed</h3><p class="muted">Run SUPABASE-v26.sql first.</p></div>';return;}
-  if(!realMatchPartnerIds.size){wrap.innerHTML='<div class="card empty-messages"><h3>No mutual matches yet</h3><p class="muted">When you and another real member like each other, the match will appear here. Real-time chat comes next.</p><button class="primary" data-nav="matches">Browse real matches</button></div>';$$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));return;}
-  const partners=realCandidateProfiles.filter(p=>realMatchPartnerIds.has(p.id));
-  wrap.innerHTML=partners.map(p=>`<article class="card conversation-card"><div class="avatar small">${escapeHTML((p.name||'?')[0])}</div><div class="conversation-copy"><strong>${escapeHTML(p.name)}${verificationBadge(p,true)}</strong><span>Mutual match ✓</span><small>Real-time chat connection is the next build.</small></div><button class="secondary" disabled>Matched</button></article>`).join('');
-}
 
-
-// ===== v28: real Supabase text chat =====
+// ===== v29: real Supabase text chat =====
 let activeRealChatMatchId=null;
 let activeRealChatPartnerId=null;
 let realChatPollTimer=null;
