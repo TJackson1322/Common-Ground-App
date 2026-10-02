@@ -1,3 +1,9 @@
+const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
+let supabaseClient = null;
+let currentSession = null;
+let currentUser = null;
+
 let mediaRecorder=null;
 let voiceChunks=[];
 let voiceStartedAt=0;
@@ -28,17 +34,20 @@ let activeChatId = null;
 function $(sel){return document.querySelector(sel)}
 function $$(sel){return [...document.querySelectorAll(sel)]}
 
-function init(){
+async function init(){
   renderPersonality();
   renderInterests();
   restoreProfile();
-  renderMatches();
   seedDemoConversations();
-  renderConversations();
   bindNav();
   bindForm();
   registerPwa();
   bindChat();
+  bindAuth();
+  await initSupabase();
+  initVerificationUI();
+  renderMatches();
+  renderConversations();
 }
 
 function renderPersonality(){
@@ -70,7 +79,7 @@ function bindForm(){
     if(step<6){step++;updateStep();}
   });
   $('#prevBtn').addEventListener('click',()=>{if(step>1){step--;updateStep();}});
-  $('#profileForm').addEventListener('submit',e=>{e.preventDefault();saveProfile();renderMatches();showScreen('matches');});
+  $('#profileForm').addEventListener('submit',async e=>{e.preventDefault();await saveProfile();renderMatches();showScreen('matches');});
 }
 function validateBasics(){
   const form=$('#profileForm');
@@ -99,7 +108,22 @@ function getProfileFromForm(){
   obj.deals={goal:fd.has('dealGoal'),smoking:fd.has('dealSmoking'),vaping:fd.has('dealVaping'),alcohol:fd.has('dealAlcohol'),cannabis:fd.has('dealCannabis')};
   return obj;
 }
-function saveProfile(){localStorage.setItem('cg_profile',JSON.stringify(getProfileFromForm()));}
+async function saveProfile(){
+  const profile=getProfileFromForm();
+  localStorage.setItem('cg_profile',JSON.stringify(profile));
+  if(!supabaseClient || !currentUser){
+    showToast('Profile saved on this device. Sign in to save it online.');
+    return;
+  }
+  const row=profileToDb(profile,currentUser.id);
+  const {error}=await supabaseClient.from('profiles').upsert(row,{onConflict:'id'});
+  if(error){
+    console.error(error);
+    showToast(`Saved on this device, but online save failed: ${error.message}`);
+    return;
+  }
+  showToast('Profile saved to your Common Ground account.');
+}
 function restoreProfile(){
   const raw=localStorage.getItem('cg_profile');if(!raw)return;
   const p=JSON.parse(raw),f=$('#profileForm');
@@ -107,6 +131,121 @@ function restoreProfile(){
   personalityTraits.forEach(t=>{if(p.personality?.[t.key]!==undefined){f.elements[t.key].value=p.personality[t.key];$(`#${t.key}Value`).textContent=p.personality[t.key];}});
   selectedInterests=new Set(p.interests||[]);$$('[data-interest]').forEach(b=>b.classList.toggle('selected',selectedInterests.has(b.dataset.interest)));
   if(p.deals){[['dealGoal','goal'],['dealSmoking','smoking'],['dealVaping','vaping'],['dealAlcohol','alcohol'],['dealCannabis','cannabis']].forEach(([el,key])=>{f.elements[el].checked=!!p.deals[key]});}
+}
+
+function showToast(message){
+  const existing=document.querySelector('.cg-toast');if(existing)existing.remove();
+  const el=document.createElement('div');el.className='cg-toast';el.textContent=message;document.body.appendChild(el);
+  setTimeout(()=>el.classList.add('show'),10);setTimeout(()=>{el.classList.remove('show');setTimeout(()=>el.remove(),250)},3400);
+}
+function setAuthMessage(message,type=''){
+  const el=$('#authMessage');if(!el)return;el.textContent=message;el.className=`auth-message ${type}`.trim();
+}
+function bindAuth(){
+  const form=$('#authForm'),signUp=$('#signUpBtn'),account=$('#accountBtn'),signOut=$('#signOutBtn');
+  if(form)form.addEventListener('submit',async e=>{e.preventDefault();await signInUser();});
+  if(signUp)signUp.addEventListener('click',signUpUser);
+  if(account)account.addEventListener('click',()=>showScreen('auth'));
+  if(signOut)signOut.addEventListener('click',signOutUser);
+}
+async function initSupabase(){
+  if(!window.supabase){setAuthMessage('Supabase could not load. Check your internet connection.','error');return;}
+  supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  const {data,error}=await supabaseClient.auth.getSession();
+  if(error)console.error(error);
+  currentSession=data?.session||null;currentUser=currentSession?.user||null;
+  updateAuthUI();
+  if(currentUser)await loadProfileFromSupabase();
+  supabaseClient.auth.onAuthStateChange(async(_event,session)=>{
+    currentSession=session||null;currentUser=session?.user||null;updateAuthUI();
+    if(currentUser)await loadProfileFromSupabase();
+  });
+}
+function updateAuthUI(){
+  const status=$('#authStatus'),account=$('#accountBtn'),signOut=$('#signOutBtn');
+  if(currentUser){
+    if(status)status.textContent=currentUser.email||'Signed in';
+    if(account){account.textContent='Account';account.classList.add('signed-in');}
+    if(signOut)signOut.classList.remove('hidden');
+  }else{
+    if(status)status.textContent='Demo mode';
+    if(account){account.textContent='Sign in';account.classList.remove('signed-in');}
+    if(signOut)signOut.classList.add('hidden');
+  }
+}
+async function signUpUser(){
+  if(!supabaseClient){setAuthMessage('Supabase is still loading. Try again in a moment.','error');return;}
+  const email=$('#authEmail').value.trim(),password=$('#authPassword').value;
+  if(!email||password.length<6){setAuthMessage('Enter a valid email and a password with at least 6 characters.','error');return;}
+  const redirectTo=window.location.origin+window.location.pathname.replace(/index\.html$/,'');
+  setAuthMessage('Creating your account…');
+  const {data,error}=await supabaseClient.auth.signUp({email,password,options:{emailRedirectTo:redirectTo}});
+  if(error){setAuthMessage(error.message,'error');return;}
+  if(data.session){setAuthMessage('Account created and signed in.','success');showToast('Welcome to Common Ground.');showScreen('onboarding');}
+  else setAuthMessage('Account created. Check your email to confirm your address, then sign in.','success');
+}
+async function signInUser(){
+  if(!supabaseClient){setAuthMessage('Supabase is still loading. Try again in a moment.','error');return;}
+  const email=$('#authEmail').value.trim(),password=$('#authPassword').value;
+  setAuthMessage('Signing in…');
+  const {error}=await supabaseClient.auth.signInWithPassword({email,password});
+  if(error){setAuthMessage(error.message,'error');return;}
+  setAuthMessage('Signed in.','success');showToast('Signed in to Common Ground.');showScreen('onboarding');
+}
+async function signOutUser(){
+  if(!supabaseClient)return;
+  await supabaseClient.auth.signOut();currentSession=null;currentUser=null;updateAuthUI();showToast('Signed out. Demo mode is still available on this device.');showScreen('home');
+}
+function profileToDb(p,userId){
+  return {
+    id:userId,
+    first_name:p.name,
+    age:Number(p.age),
+    area:p.area||null,
+    dating_radius:Number(p.radius)||25,
+    min_age:Number(p.minAge)||18,
+    max_age:Number(p.maxAge)||99,
+    relationship_goal:p.goal||null,
+    bio:p.bio||null,
+    conflict_style:p.conflict||null,
+    social_energy:p.social||null,
+    planning_style:p.planning||null,
+    children_preference:p.children||null,
+    alcohol:p.alcohol||null,
+    smoking:p.nicotine||null,
+    vaping:p.vaping||null,
+    cannabis:p.cannabis||null,
+    date_drinker:p.dateDrinker||null,
+    date_smoker:p.dateSmoker||null,
+    date_vaper:p.dateVaper||null,
+    date_cannabis:p.dateCannabis||null,
+    date_sober:p.dateSober||null,
+    interests:p.interests||[],
+    openness:p.personality?.openness??50,
+    conscientiousness:p.personality?.conscientiousness??50,
+    extraversion:p.personality?.extraversion??50,
+    agreeableness:p.personality?.agreeableness??50,
+    emotional_stability:p.personality?.emotionalStability??50,
+    updated_at:new Date().toISOString()
+  };
+}
+function dbToProfile(r){
+  return {
+    name:r.first_name||'',age:r.age||18,area:r.area||'',radius:r.dating_radius||25,minAge:r.min_age||18,maxAge:r.max_age||99,
+    goal:r.relationship_goal||'Long-term relationship',bio:r.bio||'',conflict:r.conflict_style||'Take some space, then talk',social:r.social_energy||'Balanced',planning:r.planning_style||'Plan the important things',children:r.children_preference||'I am open either way',
+    alcohol:r.alcohol||'Never',nicotine:r.smoking||'Never',vaping:r.vaping||'Never',cannabis:r.cannabis||'Never',dateDrinker:r.date_drinker||'Sometimes / depends',dateSmoker:r.date_smoker||'Sometimes / depends',dateVaper:r.date_vaper||'Sometimes / depends',dateCannabis:r.date_cannabis||'Sometimes / depends',dateSober:r.date_sober||'No preference',
+    interests:r.interests||[],verifiedNameAge:!!r.name_age_verified,
+    personality:{openness:r.openness??50,conscientiousness:r.conscientiousness??50,extraversion:r.extraversion??50,agreeableness:r.agreeableness??50,emotionalStability:r.emotional_stability??50},
+    deals:{goal:true,smoking:false,vaping:false,alcohol:false,cannabis:false}
+  };
+}
+async function loadProfileFromSupabase(){
+  if(!supabaseClient||!currentUser)return;
+  const {data,error}=await supabaseClient.from('profiles').select('*').eq('id',currentUser.id).maybeSingle();
+  if(error){console.error(error);return;}
+  if(!data)return;
+  const p=dbToProfile(data);localStorage.setItem('cg_profile',JSON.stringify(p));restoreProfile();renderMatches();initVerificationUI();
+  showToast('Your saved Common Ground profile was loaded.');
 }
 
 function getUserProfile(){
@@ -358,7 +497,7 @@ function suggestDate(u,m,shared){
 }
 
 function registerPwa(){
-  if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+  if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=20').catch(()=>{}));
   window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;$('#installBtn').classList.remove('hidden');});
   $('#installBtn').addEventListener('click',async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$('#installBtn').classList.add('hidden');});
 }
