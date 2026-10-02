@@ -70,8 +70,11 @@ function bindForm(){
 }
 function validateBasics(){
   const form=$('#profileForm');
-  for(const el of ['name','age','area']){if(!form.elements[el].value){form.elements[el].reportValidity();return false;}}
+  for(const el of ['name','age','area','minAge','maxAge']){if(!form.elements[el].value){form.elements[el].reportValidity();return false;}}
   if(Number(form.elements.age.value)<18){alert('Common Ground is for adults age 18 and older.');return false;}
+  const minAge=Number(form.elements.minAge.value),maxAge=Number(form.elements.maxAge.value);
+  if(minAge<18||maxAge<18){alert('Dating age preferences must be 18 or older.');return false;}
+  if(minAge>maxAge){alert('Your youngest preferred age cannot be higher than your oldest preferred age.');return false;}
   return true;
 }
 function updateStep(){
@@ -86,7 +89,7 @@ function updateStep(){
 function getProfileFromForm(){
   const fd = new FormData($('#profileForm'));
   const obj = Object.fromEntries(fd.entries());
-  obj.age=Number(obj.age);obj.radius=Number(obj.radius);
+  obj.age=Number(obj.age);obj.radius=Number(obj.radius);obj.minAge=Number(obj.minAge);obj.maxAge=Number(obj.maxAge);
   obj.personality={};personalityTraits.forEach(t=>obj.personality[t.key]=Number(obj[t.key]));
   obj.interests=[...selectedInterests];
   obj.deals={goal:fd.has('dealGoal'),smoking:fd.has('dealSmoking'),alcohol:fd.has('dealAlcohol'),cannabis:fd.has('dealCannabis')};
@@ -105,10 +108,12 @@ function restoreProfile(){
 function getUserProfile(){
   const raw=localStorage.getItem('cg_profile');
   if(raw)return JSON.parse(raw);
-  return {name:'You',age:30,area:'your area',radius:25,goal:'Long-term relationship',conflict:'Take some space, then talk',social:'Balanced',planning:'Plan the important things',children:'I have children',alcohol:'Occasionally',nicotine:'Never',cannabis:'Never',dateDrinker:'Sometimes / depends',dateSmoker:'No',dateSober:'No preference',dateCannabis:'Sometimes / depends',interests:['Family time','Movies','Restaurants','Outdoors','Technology'],personality:{openness:70,conscientiousness:74,extraversion:50,agreeableness:78,emotionalStability:68},deals:{goal:true,smoking:false,alcohol:false,cannabis:false}};
+  return {name:'You',age:30,area:'your area',radius:25,minAge:25,maxAge:40,goal:'Long-term relationship',conflict:'Take some space, then talk',social:'Balanced',planning:'Plan the important things',children:'I have children',alcohol:'Occasionally',nicotine:'Never',cannabis:'Never',dateDrinker:'Sometimes / depends',dateSmoker:'No',dateSober:'No preference',dateCannabis:'Sometimes / depends',interests:['Family time','Movies','Restaurants','Outdoors','Technology'],personality:{openness:70,conscientiousness:74,extraversion:50,agreeableness:78,emotionalStability:68},deals:{goal:true,smoking:false,alcohol:false,cannabis:false}};
 }
 
 function hardConflict(u,m){
+  const minAge=Number(u.minAge??18),maxAge=Number(u.maxAge??99);
+  if(Number(m.age)<minAge || Number(m.age)>maxAge) return `Outside your preferred age range (${minAge}–${maxAge})`;
   if(u.deals?.goal && !goalCompatible(u.goal,m.goal)) return 'Different relationship goals';
   if(u.deals?.smoking && m.nicotine==='Regularly') return 'Regular nicotine use is one of your deal-breakers';
   if(u.deals?.alcohol && m.alcohol==='Regularly') return 'Regular drinking is one of your deal-breakers';
@@ -166,7 +171,7 @@ function reasons(u,m,result){
 
 function renderMatches(){
   const u=getUserProfile();const personalized=!!localStorage.getItem('cg_profile');
-  $('#matchIntro').textContent=personalized?`Matches for ${u.name}, ranked by compatibility — not popularity.`:'Complete your profile for personalized results. Until then, these use a balanced demo profile.';
+  $('#matchIntro').textContent=personalized?`Matches for ${u.name}, ages ${u.minAge??18}–${u.maxAge??99}, ranked by compatibility — not popularity.`:'Complete your profile for personalized results. Until then, these use a balanced demo profile.';
   const scored=demoProfiles.map(m=>({m,r:calcMatch(u,m)})).filter(x=>!x.r.blocked).sort((a,b)=>b.r.score-a.r.score);
   const blocked=demoProfiles.length-scored.length;
   $('#matchList').innerHTML=scored.map(({m,r})=>`<article class="card match-card"><div class="match-score">${r.score}%</div><div class="avatar">${m.name[0]}</div><h3>${m.name}, ${m.age}</h3><div class="muted">${m.area} · about ${m.distance} mi</div><div class="tag-row"><span class="tag">${m.goal}</span><span class="tag">${m.social}</span><span class="tag">${m.alcohol}</span></div><ul class="why-list">${reasons(u,m,r).slice(0,3).map(x=>`<li>${x}</li>`).join('')}</ul><button class="primary" data-detail="${m.id}">Why you two?</button></article>`).join('') + (blocked?`<div class="card mini"><strong>${blocked} profile${blocked>1?'s were':' was'} filtered out</strong><p class="muted">Your deal-breakers are applied before scoring, so an otherwise high score cannot override them.</p></div>`:'');

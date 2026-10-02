@@ -53,7 +53,10 @@
             <label>Age<input required name="age" type="number" min="18" max="99" placeholder="28" /></label>
             <label>City or general area<input required name="area" placeholder="Louisville, KY" /></label>
             <label>Preferred dating radius<select name="radius"><option value="10">10 miles</option><option value="25" selected>25 miles</option><option value="50">50 miles</option><option value="100">100 miles</option></select></label>
+            <label>Youngest age you’re looking for<input required name="minAge" type="number" min="18" max="99" value="25" /></label>
+            <label>Oldest age you’re looking for<input required name="maxAge" type="number" min="18" max="99" value="40" /></label>
           </div>
+          <p class="muted age-note">Only profiles inside your selected age range will be shown as potential matches.</p>
           <label>Relationship goal<select name="goal"><option>Long-term relationship</option><option>Marriage-minded</option><option>Dating and seeing where it goes</option><option>Friendship first</option></select></label>
         </div>
 

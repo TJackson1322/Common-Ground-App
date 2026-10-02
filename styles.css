@@ -343,3 +343,5 @@ textarea{min-height:100px;resize:vertical}
   .message-bubble{max-width:85%}
   .chat-composer{grid-template-columns:1fr auto}
 }
+
+.age-note{margin:-2px 0 16px;padding:11px 13px;border-left:3px solid var(--gold);background:rgba(181,144,73,.07);border-radius:0 10px 10px 0}
