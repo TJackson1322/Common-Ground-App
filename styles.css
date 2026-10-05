@@ -433,3 +433,19 @@ input[type="color"]::-webkit-color-swatch{border:0;border-radius:12px}
 .challenge-card strong{display:block;font-size:16px;margin-top:4px}
 .challenge-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .challenge-actions button{width:auto}
+
+.game-start-card{padding:16px}
+.game-choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.game-choice-btn{min-height:48px}
+.game-message-row{justify-content:center}
+.game-bubble{max-width:520px;width:100%;padding:18px}
+.game-bubble .eyebrow{display:block;margin-bottom:6px}
+.game-bubble strong{display:block;font-size:18px;margin-bottom:6px}
+.game-prompt{font-weight:700;margin:6px 0 12px}
+.game-result-icon{font-size:28px;margin-bottom:4px}
+.game-reveal{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.game-reveal span{display:flex;flex-direction:column;gap:3px;padding:12px;border-radius:14px;background:rgba(255,255,255,.62)}
+.game-reveal small{font-size:11px;text-transform:uppercase;letter-spacing:.07em;opacity:.65}
+.game-bubble.playable{border:1px solid rgba(31,40,36,.12)}
+.game-bubble.waiting{opacity:.96}
+@media (max-width:620px){.game-choice-grid,.game-reveal{grid-template-columns:1fr}}
