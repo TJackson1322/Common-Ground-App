@@ -9,9 +9,9 @@
   <link rel="icon" href="icon-192.png?v=22" sizes="192x192" type="image/png" />
   <link rel="icon" href="icon-512.png?v=22" sizes="512x512" type="image/png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=22" />
-  <link rel="stylesheet" href="styles.css?v=48" />
+  <link rel="stylesheet" href="styles.css?v=49" />
   <title>Common Ground</title>
-  <meta name="cg-build" content="48" />
+  <meta name="cg-build" content="49" />
 </head>
 <body>
   <main class="app-shell">
@@ -291,6 +291,17 @@
       </div>
     </section>
 
+    <section id="profileDashboard" class="screen">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Your profile</span>
+          <h2>How your Common Ground is going</h2>
+          <p class="muted">A quick look at your matches, conversations, and ways to keep connections moving.</p>
+        </div>
+      </div>
+      <div id="profileDashboardContent"></div>
+    </section>
+
     <section id="about" class="screen">
       <div class="card"><span class="eyebrow">How it works</span><h2>Compatibility, not certainty.</h2><p>Common Ground is a prototype matching tool. It does not diagnose anyone, make mental-health judgments, or guarantee relationship success. Personality information is one part of a broader compatibility model.</p><p>Signed-in profiles are saved to the Common Ground Supabase database. Demo mode still uses local browser storage. Messaging and verification are being connected in stages, with privacy and safety controls remaining a core requirement.</p></div>
     </section>
@@ -299,12 +310,12 @@
       <button data-nav="home">⌂<span>Home</span></button>
       <button data-nav="matches">♡<span>Matches</span></button>
       <button data-nav="messages">✉<span>Messages</span></button>
-      <button data-nav="onboarding">☻<span>Profile</span></button>
+      <button data-nav="profileDashboard">☻<span>Profile</span></button>
     </nav>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=48"></script>
-  <!-- Common Ground beta build v48 -->
+  <script src="app.js?v=49"></script>
+  <!-- Common Ground beta build v49 -->
   <script>
     // Development build: remove older service workers/caches so GitHub Pages updates immediately.
     if ('serviceWorker' in navigator) {
