@@ -9,9 +9,9 @@
   <link rel="icon" href="icon-192.png?v=22" sizes="192x192" type="image/png" />
   <link rel="icon" href="icon-512.png?v=22" sizes="512x512" type="image/png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=22" />
-  <link rel="stylesheet" href="styles.css?v=45" />
+  <link rel="stylesheet" href="styles.css?v=46" />
   <title>Common Ground</title>
-  <meta name="cg-build" content="45" />
+  <meta name="cg-build" content="46" />
 </head>
 <body>
   <main class="app-shell">
@@ -121,6 +121,7 @@
             <label>First name<input required name="name" maxlength="30" placeholder="Alex" /></label>
             <label>Age<input required name="age" type="number" min="18" max="99" placeholder="28" /></label>
             <label>Gender<select required name="gender"><option value="">Select one</option><option>Woman</option><option>Man</option><option>Nonbinary</option><option>Another identity</option><option>Prefer not to say</option></select></label>
+            <label>Profile color<input name="avatarColor" type="color" value="#66786f" aria-label="Choose your profile color" /></label>
             <label>City or general area<input required name="area" placeholder="Louisville, KY" /></label>
             <label>Religion / faith<select required name="religion"><option value="">Select one</option><option>Christian</option><option>Catholic</option><option>Jewish</option><option>Muslim</option><option>Hindu</option><option>Buddhist</option><option>Spiritual but not religious</option><option>Agnostic</option><option>Atheist</option><option>Other</option><option>Prefer not to say</option></select></label>
             <label>Preferred match radius<select name="radius"><option value="10">10 miles</option><option value="25" selected>25 miles</option><option value="50">50 miles</option><option value="100">100 miles</option></select></label>
@@ -282,8 +283,8 @@
     </nav>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=45"></script>
-  <!-- Common Ground beta build v45 -->
+  <script src="app.js?v=46"></script>
+  <!-- Common Ground beta build v46 -->
   <script>
     // Development build: remove older service workers/caches so GitHub Pages updates immediately.
     if ('serviceWorker' in navigator) {
