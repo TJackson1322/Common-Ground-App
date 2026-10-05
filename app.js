@@ -1,4 +1,4 @@
-console.info('Common Ground build v44 verified working click handlers');
+console.info('Common Ground build v45 split matches and discovery');
 const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
 let supabaseClient = null;
@@ -651,22 +651,23 @@ async function renderMatches(){
   const personalized=hasStoredProfile();
 
   if(!currentUser){
-    $('#matchIntro').textContent=personalized?`Demo matches for ${u.name}, ages ${u.minAge??18}–${u.maxAge??99}. Sign in to see real members.`:'Complete your profile for personalized demo results, then sign in to see real members.';
+    $('#matchIntro').textContent=personalized?`Demo suggestions for ${u.name}, ages ${u.minAge??18}–${u.maxAge??99}. Sign in to see real members.`:'Complete your profile for personalized demo suggestions, then sign in to see real members.';
     const scored=demoProfiles.map(m=>({m,r:calcMatch(u,m)})).filter(x=>!x.r.blocked).sort((a,b)=>b.r.score-a.r.score);
-    list.innerHTML=scored.map(({m,r})=>`<article class="card match-card"><div class="match-score">${r.score}%</div><div class="avatar">${m.name[0]}</div><h3>${m.name}${verificationBadge(m,true)}, ${m.age}</h3>${verificationLine(m)}<div class="muted">${m.area} · demo profile</div><div class="tag-row"><span class="tag">${m.goal}</span><span class="tag">${m.social}</span></div><button class="primary" data-demo-detail="${m.id}">Why you two?</button></article>`).join('');
+    list.innerHTML=`<section class="match-section"><div class="match-section-head"><div><span class="eyebrow">Discover</span><h3>People You May Like</h3></div></div><div class="match-grid">${scored.map(({m,r})=>`<article class="card match-card"><div class="match-score">${r.score}%</div><div class="avatar">${m.name[0]}</div><h3>${m.name}${verificationBadge(m,true)}, ${m.age}</h3>${verificationLine(m)}<div class="muted">${m.area} · demo profile</div><div class="tag-row"><span class="tag">${m.goal}</span><span class="tag">${m.social}</span></div><button class="primary" data-demo-detail="${m.id}">View profile</button></article>`).join('')}</div></section>`;
     $$('[data-demo-detail]').forEach(b=>b.addEventListener('click',()=>showDemoDetail(Number(b.dataset.demoDetail))));
     return;
   }
 
   if(!personalized){
     $('#matchIntro').textContent='Finish your profile first so Common Ground can calculate meaningful compatibility.';
-    list.innerHTML='<div class="card mini"><h3>Finish your profile</h3><p class="muted">Your age preferences, relationship goal, lifestyle, personality and interests are used before real profiles are shown.</p><button class="primary" data-nav="onboarding">Build my profile</button></div>';
+    list.innerHTML='<div class="card mini"><h3>Finish your profile</h3><p class="muted">Your age preferences, relationship goals, lifestyle, personality and interests are used before real profiles are shown.</p><button class="primary" data-nav="onboarding">Build my profile</button></div>';
     $$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
     return;
   }
 
-  $('#matchIntro').textContent=`Real members for ${u.name}, ages ${u.minAge??18}–${u.maxAge??99}, ranked by compatibility.`;
-  list.innerHTML='<div class="card mini"><strong>Finding real members…</strong><p class="muted">Applying your age range and lifestyle preferences.</p></div>';
+  $('#matchIntro').textContent=`Connections and suggestions for ${u.name}, based on compatibility.`;
+  list.innerHTML='<div class="card mini"><strong>Finding your people…</strong><p class="muted">Loading matches and compatible members.</p></div>';
+
   try{await loadRealMatchingData(true)}catch(err){
     list.innerHTML=`<div class="card mini"><h3>Real matching needs one Supabase update</h3><p class="muted">${escapeHTML(err.message||'Could not load matching data.')}</p><p class="muted">Run the <strong>SUPABASE-v26.sql</strong> file included in this build, then refresh.</p></div>`;
     return;
@@ -678,17 +679,19 @@ async function renderMatches(){
     .filter(x=>!x.r.blocked)
     .sort((a,b)=>b.r.score-a.r.score);
 
-  if(!eligible.length){
-    const d=matchingDiagnostic(u);
-    const detail=d.rows.length ? `<div class="filter-debug"><strong>What Common Ground found:</strong>${d.rows.map(x=>`<p class="muted"><strong>${escapeHTML(x.name)}:</strong> ${escapeHTML(x.reason)}</p>`).join('')}</div>` : '';
-    list.innerHTML=`<div class="card mini"><h3>${d.counts.total?'No compatible profiles are showing yet':'You’re ready for your first tester.'}</h3><p class="muted">${d.counts.total?'Another real profile exists, but it is currently being filtered. The reason is shown below so we can test safely.':'Another person needs to create an account and click Save & find matches so their profile is stored in Supabase.'}</p>${detail}</div>`;
-    return;
-  }
+  const matched=eligible.filter(x=>realMatchPartnerIds.has(x.m.id));
+  const suggestions=eligible.filter(x=>!realMatchPartnerIds.has(x.m.id));
 
-  list.innerHTML=eligible.map(({m,r})=>{
-    const isMatched=realMatchPartnerIds.has(m.id), liked=realLikes.has(m.id);
-    return `<article class="card match-card"><div class="match-score">${r.score}%</div><div class="avatar">${escapeHTML((m.name||'?')[0])}</div><h3>${escapeHTML(m.name)}${verificationBadge(m,true)}, ${m.age}</h3>${verificationLine(m)}<div class="muted">${candidateAreaText(m)}</div><div class="tag-row"><span class="tag">${escapeHTML(m.goal)}</span><span class="tag">${escapeHTML(m.social)}</span><span class="tag">${escapeHTML(m.alcohol)}</span></div><ul class="why-list">${reasons(u,m,r).slice(0,3).map(x=>`<li>${escapeHTML(x)}</li>`).join('')}</ul><div class="match-actions"><button class="primary" data-real-detail="${m.id}">${isMatched?'Mutual match ✓':liked?'Liked ✓':'Why you two?'}</button>${isMatched?`<button class="secondary" data-message-user="${m.id}">Message</button>`:''}</div></article>`;
-  }).join('');
+  const cardHtml=({m,r},matchedCard=false)=>{
+    const liked=realLikes.has(m.id);
+    return `<article class="card match-card"><div class="match-score">${r.score}%</div><div class="avatar">${escapeHTML((m.name||'?')[0])}</div><h3>${escapeHTML(m.name)}${verificationBadge(m,true)}, ${m.age}</h3>${verificationLine(m)}<div class="muted">${candidateAreaText(m)}</div><div class="tag-row"><span class="tag">${escapeHTML(m.goal)}</span><span class="tag">${escapeHTML(m.social)}</span><span class="tag">${escapeHTML(m.alcohol)}</span></div><ul class="why-list">${reasons(u,m,r).slice(0,3).map(x=>`<li>${escapeHTML(x)}</li>`).join('')}</ul><div class="match-actions"><button class="primary" data-real-detail="${m.id}">${matchedCard?'View match':'View profile'}</button>${matchedCard?`<button class="secondary" data-message-user="${m.id}">Message</button>`:(liked?`<button class="secondary" data-real-detail="${m.id}">Liked ✓</button>`:'')}</div></article>`;
+  };
+
+  const matchesHtml=`<section class="match-section"><div class="match-section-head"><div><span class="eyebrow">Your connections</span><h3>Matches</h3><p class="muted">People who liked you back.</p></div><span class="section-count">${matched.length}</span></div>${matched.length?`<div class="match-grid">${matched.map(x=>cardHtml(x,true)).join('')}</div>`:'<div class="card mini"><h3>No mutual matches yet</h3><p class="muted">When you and another person like each other, they’ll appear here.</p></div>'}</section>`;
+
+  const suggestionsHtml=`<section class="match-section"><div class="match-section-head"><div><span class="eyebrow">Discover</span><h3>People You May Like</h3><p class="muted">Compatible people you haven’t matched with yet.</p></div><span class="section-count">${suggestions.length}</span></div>${suggestions.length?`<div class="match-grid">${suggestions.map(x=>cardHtml(x,false)).join('')}</div>`:'<div class="card mini"><h3>No new suggestions right now</h3><p class="muted">As more compatible people join, they’ll appear here.</p></div>'}</section>`;
+
+  list.innerHTML=matchesHtml+suggestionsHtml;
   $$('[data-real-detail]').forEach(b=>b.addEventListener('click',()=>showDetail(b.dataset.realDetail)));
   $$('[data-message-user]').forEach(b=>b.addEventListener('click',()=>openRealChat(b.dataset.messageUser)));
 }
