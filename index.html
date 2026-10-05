@@ -9,9 +9,9 @@
   <link rel="icon" href="icon-192.png?v=22" sizes="192x192" type="image/png" />
   <link rel="icon" href="icon-512.png?v=22" sizes="512x512" type="image/png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=22" />
-  <link rel="stylesheet" href="styles.css?v=46" />
+  <link rel="stylesheet" href="styles.css?v=47" />
   <title>Common Ground</title>
-  <meta name="cg-build" content="46" />
+  <meta name="cg-build" content="47" />
 </head>
 <body>
   <main class="app-shell">
@@ -43,6 +43,17 @@
           <button class="ghost" data-nav="accountSettings">Account settings</button>
         </div>
       </div>
+
+      <section id="homeSuggestions" class="home-suggestions hidden">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Discover</span>
+            <h2>People You May Like</h2>
+            <p class="muted">Your strongest compatibility suggestions, highest match first.</p>
+          </div>
+        </div>
+        <div id="homeSuggestionList" class="home-suggestion-list"></div>
+      </section>
 
       <div class="grid three">
         <article class="card mini"><span class="icon">🧠</span><h3>Psychology-informed</h3><p>Uses Big Five-style personality dimensions and communication preferences without pretending to predict love.</p></article>
@@ -237,7 +248,7 @@
 
     <section id="matches" class="screen">
       <div class="section-head">
-        <div><span class="eyebrow">Curated matches</span><h2>Your common ground</h2><p id="matchIntro" class="muted">Complete your profile for personalized results. Until then, these use a balanced demo profile.</p></div>
+        <div><span class="eyebrow">Your connections</span><h2>Matches</h2><p id="matchIntro" class="muted">People who have mutually matched with you.</p></div>
         <button class="secondary" data-nav="onboarding">Edit profile</button>
       </div>
       <div id="matchList" class="match-list"></div>
@@ -283,8 +294,8 @@
     </nav>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=46"></script>
-  <!-- Common Ground beta build v46 -->
+  <script src="app.js?v=47"></script>
+  <!-- Common Ground beta build v47 -->
   <script>
     // Development build: remove older service workers/caches so GitHub Pages updates immediately.
     if ('serviceWorker' in navigator) {
