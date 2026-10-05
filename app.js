@@ -1,4 +1,4 @@
-console.info('Common Ground build v50 optional chat challenge');
+console.info('Common Ground build v51 fixed dashboard navigation');
 const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
 let supabaseClient = null;
