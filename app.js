@@ -1,4 +1,4 @@
-console.info('Common Ground build v35 preferences + match messaging');
+console.info('Common Ground build v36 direct match messaging');
 const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
 let supabaseClient = null;
@@ -678,9 +678,10 @@ async function renderMatches(){
 
   list.innerHTML=eligible.map(({m,r})=>{
     const isMatched=realMatchPartnerIds.has(m.id), liked=realLikes.has(m.id);
-    return `<article class="card match-card"><div class="match-score">${r.score}%</div><div class="avatar">${escapeHTML((m.name||'?')[0])}</div><h3>${escapeHTML(m.name)}${verificationBadge(m,true)}, ${m.age}</h3>${verificationLine(m)}<div class="muted">${candidateAreaText(m)}</div><div class="tag-row"><span class="tag">${escapeHTML(m.goal)}</span><span class="tag">${escapeHTML(m.social)}</span><span class="tag">${escapeHTML(m.alcohol)}</span></div><ul class="why-list">${reasons(u,m,r).slice(0,3).map(x=>`<li>${escapeHTML(x)}</li>`).join('')}</ul><button class="primary" data-real-detail="${m.id}">${isMatched?'Mutual match ✓':liked?'Liked ✓':'Why you two?'}</button></article>`;
+    return `<article class="card match-card"><div class="match-score">${r.score}%</div><div class="avatar">${escapeHTML((m.name||'?')[0])}</div><h3>${escapeHTML(m.name)}${verificationBadge(m,true)}, ${m.age}</h3>${verificationLine(m)}<div class="muted">${candidateAreaText(m)}</div><div class="tag-row"><span class="tag">${escapeHTML(m.goal)}</span><span class="tag">${escapeHTML(m.social)}</span><span class="tag">${escapeHTML(m.alcohol)}</span></div><ul class="why-list">${reasons(u,m,r).slice(0,3).map(x=>`<li>${escapeHTML(x)}</li>`).join('')}</ul><div class="match-actions"><button class="primary" data-real-detail="${m.id}">${isMatched?'Mutual match ✓':liked?'Liked ✓':'Why you two?'}</button>${isMatched?`<button class="secondary" data-message-user="${m.id}">Message</button>`:''}</div></article>`;
   }).join('');
-  $$('[data-real-detail]').forEach(b=>b.addEventListener('click',()=>showDetail(b.dataset.realDetail)));
+  $('[data-real-detail]').forEach(b=>b.addEventListener('click',()=>showDetail(b.dataset.realDetail)));
+  $('[data-message-user]').forEach(b=>b.addEventListener('click',()=>openRealChat(b.dataset.messageUser)));
 }
 
 function showDemoDetail(id){
