@@ -1,4 +1,4 @@
-console.info('Common Ground build v49 profile dashboard');
+console.info('Common Ground build v50 optional chat challenge');
 const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
 let supabaseClient = null;
@@ -969,6 +969,43 @@ async function renderProfileDashboard(){
   $('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
 }
 
+const commonGroundChallenges=[
+  'Pick one: cozy night in or spontaneous night out?',
+  'What is your ideal way to spend a free Saturday?',
+  'Pick one: beach, mountains, or city trip?',
+  'What is one small thing that always makes your day better?',
+  'Pick one: plan everything or figure it out as you go?',
+  'What is something you could talk about for hours?',
+  'Pick one: early bird or night owl?',
+  'What is one place you would love to visit together someday?',
+  'Pick one: cook together or try a new restaurant?',
+  'What is your perfect low-key date?'
+];
+
+function randomChallenge(){
+  return commonGroundChallenges[Math.floor(Math.random()*commonGroundChallenges.length)];
+}
+
+function renderChallengeBox(){
+  const box=$('#challengeBox');
+  if(!box)return;
+  const q=randomChallenge();
+  box.classList.remove('hidden');
+  box.innerHTML=`<div class="challenge-card"><span class="eyebrow">Common Ground Challenge</span><strong>${escapeHTML(q)}</strong><p class="muted">Optional — send it if you want an easy way to keep the conversation going.</p><div class="challenge-actions"><button class="primary" id="sendChallengeBtn" type="button">Send challenge</button><button class="secondary" id="newChallengeBtn" type="button">New question</button><button class="ghost" id="closeChallengeBtn" type="button">Close</button></div></div>`;
+  $('#sendChallengeBtn')?.addEventListener('click',async()=>{
+    const text=`🎲 Common Ground Challenge: ${q}`;
+    const ok=await sendRealTextMessage(text);
+    if(ok){
+      box.classList.add('hidden');
+      box.innerHTML='';
+      await renderRealChatMessages();
+      await renderConversations();
+    }
+  });
+  $('#newChallengeBtn')?.addEventListener('click',renderChallengeBox);
+  $('#closeChallengeBtn')?.addEventListener('click',()=>{box.classList.add('hidden');box.innerHTML='';});
+}
+
 function conversationStarter(u,m){
   const shared=(m.interests||[]).filter(i=>(u.interests||[]).includes(i));
   if(shared.includes('Family time'))return 'You both value family time. What does a perfect family day look like to you?';
@@ -991,8 +1028,9 @@ async function openRealChat(partnerId){
   activeRealChatPartnerId=partnerId;
   activeChatId=null;
   const starter=conversationStarter(getUserProfile(),partner);
-  $('#chatHeader').innerHTML=`<div class="conversation-avatar" style="${avatarStyle(partner)}">${escapeHTML((partner.name||'?')[0])}</div><div class="chat-person"><div class="chat-title">${escapeHTML(partner.name)}${verificationBadge(partner,true)}</div><div class="chat-subtitle">Mutual match through Common Ground${partner.area?' · '+escapeHTML(partner.area):''}</div><div class="chat-starter"><strong>Need an opener?</strong> ${escapeHTML(starter)}</div><button class="secondary starter-use-btn" id="useStarterBtn" type="button">Use this question</button><div class="chat-safety-actions"><button class="ghost danger-lite" id="reportUserBtn" type="button">Report</button><button class="ghost danger-lite" id="blockUserBtn" type="button">Block</button></div></div>`;
+  $('#chatHeader').innerHTML=`<div class="conversation-avatar" style="${avatarStyle(partner)}">${escapeHTML((partner.name||'?')[0])}</div><div class="chat-person"><div class="chat-title">${escapeHTML(partner.name)}${verificationBadge(partner,true)}</div><div class="chat-subtitle">Mutual match through Common Ground${partner.area?' · '+escapeHTML(partner.area):''}</div><div class="chat-starter"><strong>Need an opener?</strong> ${escapeHTML(starter)}</div><div class="chat-helper-actions"><button class="secondary starter-use-btn" id="useStarterBtn" type="button">Use this question</button><button class="secondary" id="challengeBtn" type="button">🎲 Common Ground Challenge</button></div><div id="challengeBox" class="challenge-box hidden"></div><div class="chat-safety-actions"><button class="ghost danger-lite" id="reportUserBtn" type="button">Report</button><button class="ghost danger-lite" id="blockUserBtn" type="button">Block</button></div></div>`;
   $('#useStarterBtn')?.addEventListener('click',()=>{const input=$('#chatInput');if(input){input.value=starter;input.focus();}});
+  $('#challengeBtn')?.addEventListener('click',renderChallengeBox);
   $('#reportUserBtn')?.addEventListener('click',()=>reportRealUser(partnerId,partner.name));
   $('#blockUserBtn')?.addEventListener('click',()=>blockRealUser(partnerId,partner.name));
   const voiceBtn=$('#voiceMemoBtn');
