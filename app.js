@@ -1,4 +1,4 @@
-console.info('Common Ground build v38 interests + smarter starters');
+console.info('Common Ground build v39 fixed sign-in routing');
 const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
 let supabaseClient = null;
@@ -237,9 +237,18 @@ async function signInUser(){
   if(!supabaseClient){setAuthMessage('Supabase is still loading. Try again in a moment.','error');return;}
   const email=$('#authEmail').value.trim(),password=$('#authPassword').value;
   setAuthMessage('Signing in…');
-  const {error}=await supabaseClient.auth.signInWithPassword({email,password});
+  const {data,error}=await supabaseClient.auth.signInWithPassword({email,password});
   if(error){setAuthMessage(error.message,'error');return;}
-  setAuthMessage('Signed in.','success');showToast('Signed in to Common Ground.');showScreen('onboarding');
+  currentSession=data?.session||null;
+  currentUser=currentSession?.user||data?.user||null;
+  updateAuthUI();
+  if(currentUser){
+    try{await loadProfileFromSupabase();}catch(err){console.error('Profile load after sign in failed',err);}
+    updateAuthUI();
+  }
+  setAuthMessage('Signed in.','success');
+  showToast('Signed in to Common Ground.');
+  showScreen(hasStoredProfile()?'matches':'onboarding');
 }
 async function signOutUser(){
   if(!supabaseClient)return;
