@@ -701,14 +701,15 @@ async function showDetail(id){
   const date=suggestDate(u,m,shared);
   const isMatched=realMatchPartnerIds.has(m.id),liked=realLikes.has(m.id);
   const actionHtml=isMatched
-    ? `<div class="match-success"><strong>Mutual match ✓</strong><p>You both liked each other. Real-time chat is the next connection step.</p></div>`
+    ? `<div class="match-success"><strong>Mutual match ✓</strong><p>You both liked each other. Say hello when you’re ready.</p></div><button class="primary" data-message-user="${m.id}">Message</button>`
     : liked
       ? `<div class="match-success"><strong>Like sent ✓</strong><p>If ${escapeHTML(m.name)} likes you too, Common Ground will create a mutual match.</p></div><button class="secondary" data-pass-user="${m.id}">Pass instead</button>`
       : `<button class="primary" data-like-user="${m.id}">♡ Like</button><button class="secondary" data-pass-user="${m.id}">Pass</button>`;
   $('#matchDetailContent').innerHTML=`<div class="detail-grid"><article class="card detail-card"><span class="eyebrow">Real compatibility</span><div class="score-big">${r.score}%</div><h2>${escapeHTML(m.name)}${verificationBadge(m)}, ${m.age}</h2>${verificationLine(m)}<p class="muted">${candidateAreaText(m)}</p><p>${escapeHTML(m.bio||'')}</p><div class="tag-row">${(m.interests||[]).slice(0,6).map(i=>`<span class="tag">${escapeHTML(i)}</span>`).join('')}</div><div class="match-actions">${actionHtml}<button class="ghost" data-nav="matches">Back to matches</button></div></article><article class="card detail-card"><span class="eyebrow">Why you two?</span><h2>There’s real overlap here.</h2><ul class="why-list">${reasons(u,m,r).map(x=>`<li>${escapeHTML(x)}</li>`).join('')}</ul><div class="compat-bars">${Object.entries(r.parts).map(([k,v])=>`<div class="bar-row"><span>${k}</span><div class="bar"><span style="width:${v}%"></span></div><strong>${v}</strong></div>`).join('')}</div></article></div><div class="detail-grid" style="margin-top:18px"><article class="card detail-card"><span class="eyebrow">Lifestyle snapshot</span><h3>${escapeHTML(m.alcohol)}</h3><p>${escapeHTML(m.alcohol)} alcohol · ${escapeHTML(m.nicotine)} cigarettes · ${escapeHTML(m.vaping??'Never')} vaping · ${escapeHTML(m.cannabis)} cannabis</p></article><article class="date-box"><span class="eyebrow" style="color:#d7bf8c">Suggested first date</span><h2>${date.title}</h2><p>${date.text}</p><strong>${date.cost}</strong></article></div>`;
   showScreen('matchDetail');
-  $$('[data-like-user]').forEach(b=>b.addEventListener('click',()=>likeRealUser(b.dataset.likeUser)));
-  $$('[data-pass-user]').forEach(b=>b.addEventListener('click',()=>passRealUser(b.dataset.passUser)));
+  $('[data-like-user]').forEach(b=>b.addEventListener('click',()=>likeRealUser(b.dataset.likeUser)));
+  $('[data-pass-user]').forEach(b=>b.addEventListener('click',()=>passRealUser(b.dataset.passUser)));
+  $('[data-message-user]').forEach(b=>b.addEventListener('click',()=>openRealChat(b.dataset.messageUser)));
   $$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
 }
 
@@ -786,6 +787,14 @@ async function renderConversations(){
   $$('[data-real-chat-partner]').forEach(b=>b.addEventListener('click',()=>openRealChat(b.dataset.realChatPartner)));
 }
 
+function conversationStarter(u,m){
+  const shared=(m.interests||[]).filter(i=>(u.interests||[]).includes(i));
+  if(shared.length)return `You both like ${shared[0]}. What got you into it?`;
+  if((u.religion&&m.religion)&&u.religion===m.religion&&u.religion!=='Prefer not to say')return `What does ${u.religion} mean in your everyday life?`;
+  if(goalList(u).includes('Friends only / platonic friendship')||goalList(m).includes('Friends only / platonic friendship'))return 'What is something you always enjoy doing with friends?';
+  return 'What is something you are looking forward to this week?';
+}
+
 async function openRealChat(partnerId){
   if(!currentUser||!supabaseClient)return showScreen('auth');
   await loadRealMatchingData(true);
@@ -795,7 +804,9 @@ async function openRealChat(partnerId){
   activeRealChatMatchId=match.id;
   activeRealChatPartnerId=partnerId;
   activeChatId=null;
-  $('#chatHeader').innerHTML=`<div class="conversation-avatar">${escapeHTML((partner.name||'?')[0])}</div><div class="chat-person"><div class="chat-title">${escapeHTML(partner.name)}${verificationBadge(partner,true)}</div><div class="chat-subtitle">Mutual match through Common Ground${partner.area?' · '+escapeHTML(partner.area):''}</div><div class="chat-safety-actions"><button class="ghost danger-lite" id="reportUserBtn" type="button">Report</button><button class="ghost danger-lite" id="blockUserBtn" type="button">Block</button></div></div>`;
+  const starter=conversationStarter(getUserProfile(),partner);
+  $('#chatHeader').innerHTML=`<div class="conversation-avatar">${escapeHTML((partner.name||'?')[0])}</div><div class="chat-person"><div class="chat-title">${escapeHTML(partner.name)}${verificationBadge(partner,true)}</div><div class="chat-subtitle">Mutual match through Common Ground${partner.area?' · '+escapeHTML(partner.area):''}</div><div class="chat-starter"><strong>Need an opener?</strong> ${escapeHTML(starter)}</div><button class="secondary starter-use-btn" id="useStarterBtn" type="button">Use this question</button><div class="chat-safety-actions"><button class="ghost danger-lite" id="reportUserBtn" type="button">Report</button><button class="ghost danger-lite" id="blockUserBtn" type="button">Block</button></div></div>`;
+  $('#useStarterBtn')?.addEventListener('click',()=>{const input=$('#chatInput');if(input){input.value=starter;input.focus();}});
   $('#reportUserBtn')?.addEventListener('click',()=>reportRealUser(partnerId,partner.name));
   $('#blockUserBtn')?.addEventListener('click',()=>blockRealUser(partnerId,partner.name));
   const voiceBtn=$('#voiceMemoBtn');
