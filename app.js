@@ -1,4 +1,4 @@
-console.info('Common Ground build v39 fixed sign-in routing');
+console.info('Common Ground build v40 fixed match click handlers');
 const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
 let supabaseClient = null;
