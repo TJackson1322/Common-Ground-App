@@ -1,4 +1,4 @@
-console.info('Common Ground build v42 verified selectors');
+console.info('Common Ground build v44 verified working click handlers');
 const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
 let supabaseClient = null;
@@ -689,8 +689,8 @@ async function renderMatches(){
     const isMatched=realMatchPartnerIds.has(m.id), liked=realLikes.has(m.id);
     return `<article class="card match-card"><div class="match-score">${r.score}%</div><div class="avatar">${escapeHTML((m.name||'?')[0])}</div><h3>${escapeHTML(m.name)}${verificationBadge(m,true)}, ${m.age}</h3>${verificationLine(m)}<div class="muted">${candidateAreaText(m)}</div><div class="tag-row"><span class="tag">${escapeHTML(m.goal)}</span><span class="tag">${escapeHTML(m.social)}</span><span class="tag">${escapeHTML(m.alcohol)}</span></div><ul class="why-list">${reasons(u,m,r).slice(0,3).map(x=>`<li>${escapeHTML(x)}</li>`).join('')}</ul><div class="match-actions"><button class="primary" data-real-detail="${m.id}">${isMatched?'Mutual match ✓':liked?'Liked ✓':'Why you two?'}</button>${isMatched?`<button class="secondary" data-message-user="${m.id}">Message</button>`:''}</div></article>`;
   }).join('');
-  $('[data-real-detail]').forEach(b=>b.addEventListener('click',()=>showDetail(b.dataset.realDetail)));
-  $('[data-message-user]').forEach(b=>b.addEventListener('click',()=>openRealChat(b.dataset.messageUser)));
+  $$('[data-real-detail]').forEach(b=>b.addEventListener('click',()=>showDetail(b.dataset.realDetail)));
+  $$('[data-message-user]').forEach(b=>b.addEventListener('click',()=>openRealChat(b.dataset.messageUser)));
 }
 
 function showDemoDetail(id){
@@ -717,9 +717,9 @@ async function showDetail(id){
       : `<button class="primary" data-like-user="${m.id}">♡ Like</button><button class="secondary" data-pass-user="${m.id}">Pass</button>`;
   $('#matchDetailContent').innerHTML=`<div class="detail-grid"><article class="card detail-card"><span class="eyebrow">Real compatibility</span><div class="score-big">${r.score}%</div><h2>${escapeHTML(m.name)}${verificationBadge(m)}, ${m.age}</h2>${verificationLine(m)}<p class="muted">${candidateAreaText(m)}</p><p>${escapeHTML(m.bio||'')}</p><div class="tag-row">${(m.interests||[]).slice(0,6).map(i=>`<span class="tag">${escapeHTML(i)}</span>`).join('')}</div><div class="match-actions">${actionHtml}<button class="ghost" data-nav="matches">Back to matches</button></div></article><article class="card detail-card"><span class="eyebrow">Why you two?</span><h2>There’s real overlap here.</h2><ul class="why-list">${reasons(u,m,r).map(x=>`<li>${escapeHTML(x)}</li>`).join('')}</ul><div class="compat-bars">${Object.entries(r.parts).map(([k,v])=>`<div class="bar-row"><span>${k}</span><div class="bar"><span style="width:${v}%"></span></div><strong>${v}</strong></div>`).join('')}</div></article></div><div class="detail-grid" style="margin-top:18px"><article class="card detail-card"><span class="eyebrow">Lifestyle snapshot</span><h3>${escapeHTML(m.alcohol)}</h3><p>${escapeHTML(m.alcohol)} alcohol · ${escapeHTML(m.nicotine)} cigarettes · ${escapeHTML(m.vaping??'Never')} vaping · ${escapeHTML(m.cannabis)} cannabis</p></article><article class="date-box"><span class="eyebrow" style="color:#d7bf8c">Suggested first date</span><h2>${date.title}</h2><p>${date.text}</p><strong>${date.cost}</strong></article></div>`;
   showScreen('matchDetail');
-  $('[data-like-user]').forEach(b=>b.addEventListener('click',()=>likeRealUser(b.dataset.likeUser)));
-  $('[data-pass-user]').forEach(b=>b.addEventListener('click',()=>passRealUser(b.dataset.passUser)));
-  $('[data-message-user]').forEach(b=>b.addEventListener('click',()=>openRealChat(b.dataset.messageUser)));
+  $$('[data-like-user]').forEach(b=>b.addEventListener('click',()=>likeRealUser(b.dataset.likeUser)));
+  $$('[data-pass-user]').forEach(b=>b.addEventListener('click',()=>passRealUser(b.dataset.passUser)));
+  $$('[data-message-user]').forEach(b=>b.addEventListener('click',()=>openRealChat(b.dataset.messageUser)));
   $$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
 }
 
