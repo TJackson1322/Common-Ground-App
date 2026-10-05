@@ -1,4 +1,4 @@
-console.info('Common Ground build v53 better home actions');
+console.info('Common Ground build v54 home notifications');
 const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
 let supabaseClient = null;
@@ -49,6 +49,7 @@ async function init(){
   await initSupabase();
   initVerificationUI();
   renderHomeSuggestions();
+  renderHomeNotifications();
   renderMatches();
   renderConversations();
   renderProfileDashboard();
@@ -67,12 +68,15 @@ function renderInterests(){
 
 function bindNav(){
   $('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
-  $('#discoverPeopleBtn')?.addEventListener('click',async()=>{
-    await renderHomeSuggestions();
-    const section=$('#homeSuggestions');
-    if(section){
-      section.scrollIntoView({behavior:'smooth',block:'start'});
-    }
+  $('#newMatchesBtn')?.addEventListener('click',async()=>{
+    markMatchesSeen();
+    await renderHomeNotifications();
+    showScreen('matches');
+  });
+  $('#newMessagesBtn')?.addEventListener('click',async()=>{
+    markMessagesSeenNow();
+    await renderHomeNotifications();
+    showScreen('messages');
   });
 }
 function showScreen(id){
@@ -86,7 +90,7 @@ function showScreen(id){
   $$('.screen').forEach(screen=>screen.classList.remove('active'));
   $('#'+id).classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
-  if(id==='home') renderHomeSuggestions();
+  if(id==='home'){renderHomeSuggestions();renderHomeNotifications();}
   if(id==='matches') renderMatches();
   if(id==='messages') renderConversations();
   if(id==='profileDashboard') renderProfileDashboard();
@@ -693,6 +697,53 @@ function matchingDiagnostic(u){
   }));
   const counts={total:rows.length,eligible:rows.filter(x=>x.reason==='Eligible').length,passed:rows.filter(x=>x.reason==='Previously passed').length};
   return {rows,counts};
+}
+
+function notificationStorageKey(kind){
+  return currentUser?.id?`cg_${kind}_${currentUser.id}`:`cg_${kind}_guest`;
+}
+function seenMatchIds(){
+  try{return new Set(JSON.parse(localStorage.getItem(notificationStorageKey('seen_matches'))||'[]'));}catch(_e){return new Set();}
+}
+function markMatchesSeen(){
+  if(!currentUser)return;
+  localStorage.setItem(notificationStorageKey('seen_matches'),JSON.stringify([...realMatchPartnerIds]));
+}
+function lastSeenMessagesAt(){
+  return localStorage.getItem(notificationStorageKey('last_seen_messages'))||'';
+}
+function markMessagesSeenNow(){
+  if(!currentUser)return;
+  localStorage.setItem(notificationStorageKey('last_seen_messages'),new Date().toISOString());
+}
+async function renderHomeNotifications(){
+  const matchEl=$('#newMatchesCount'),messageEl=$('#newMessagesCount');
+  if(!matchEl||!messageEl)return;
+  if(!currentUser){
+    matchEl.textContent='0 New Matches';
+    messageEl.textContent='0 New Messages';
+    return;
+  }
+
+  try{await loadRealMatchingData(true);}catch(_e){}
+
+  const seen=seenMatchIds();
+  const newMatches=[...realMatchPartnerIds].filter(id=>!seen.has(id)).length;
+  matchEl.textContent=`${newMatches} New Match${newMatches===1?'':'es'}`;
+
+  let newMessages=0;
+  const matchIds=(realMatchRows||[]).map(m=>m.id);
+  if(matchIds.length&&supabaseClient){
+    let query=supabaseClient.from('messages')
+      .select('id,sender_id,created_at')
+      .in('match_id',matchIds)
+      .neq('sender_id',currentUser.id);
+    const lastSeen=lastSeenMessagesAt();
+    if(lastSeen)query=query.gt('created_at',lastSeen);
+    const {data,error}=await query;
+    if(!error)newMessages=(data||[]).length;
+  }
+  messageEl.textContent=`${newMessages} New Message${newMessages===1?'':'s'}`;
 }
 
 async function renderHomeSuggestions(){
