@@ -9,9 +9,9 @@
   <link rel="icon" href="icon-192.png?v=22" sizes="192x192" type="image/png" />
   <link rel="icon" href="icon-512.png?v=22" sizes="512x512" type="image/png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=22" />
-  <link rel="stylesheet" href="styles.css?v=53" />
+  <link rel="stylesheet" href="styles.css?v=54" />
   <title>Common Ground</title>
-  <meta name="cg-build" content="53" />
+  <meta name="cg-build" content="54" />
 </head>
 <body>
   <main class="app-shell">
@@ -37,10 +37,15 @@
           <button class="secondary" data-nav="matches">See demo matches</button>
           <button class="ghost" data-nav="auth">Sign in / Create account</button>
         </div>
-        <div id="homeLoggedInActions" class="hero-actions hidden">
-          <button class="primary" id="discoverPeopleBtn" type="button">Discover people</button>
-          <button class="secondary" data-nav="messages">Continue conversations</button>
-          <button class="ghost" data-nav="about">How Common Ground works</button>
+        <div id="homeLoggedInActions" class="home-notification-bar hidden">
+          <button class="home-notification" id="newMatchesBtn" type="button">
+            <span class="notification-icon">✨</span>
+            <span><strong id="newMatchesCount">0 New Matches</strong><small>See your latest connections</small></span>
+          </button>
+          <button class="home-notification" id="newMessagesBtn" type="button">
+            <span class="notification-icon">💬</span>
+            <span><strong id="newMessagesCount">0 New Messages</strong><small>Continue the conversation</small></span>
+          </button>
         </div>
       </div>
 
@@ -314,8 +319,8 @@
     </nav>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=53"></script>
-  <!-- Common Ground beta build v53 -->
+  <script src="app.js?v=54"></script>
+  <!-- Common Ground beta build v54 -->
   <script>
     // Development build: remove older service workers/caches so GitHub Pages updates immediately.
     if ('serviceWorker' in navigator) {
