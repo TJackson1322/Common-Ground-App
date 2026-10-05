@@ -1,4 +1,4 @@
-console.info('Common Ground build v48 easier profile editing');
+console.info('Common Ground build v49 profile dashboard');
 const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
 let supabaseClient = null;
@@ -51,6 +51,7 @@ async function init(){
   renderHomeSuggestions();
   renderMatches();
   renderConversations();
+  renderProfileDashboard();
 }
 
 function renderPersonality(){
@@ -81,6 +82,7 @@ function showScreen(id){
   if(id==='home') renderHomeSuggestions();
   if(id==='matches') renderMatches();
   if(id==='messages') renderConversations();
+  if(id==='profileDashboard') renderProfileDashboard();
 }
 
 function bindForm(){
@@ -862,6 +864,109 @@ async function renderConversations(){
   }).filter(x=>x.partner).sort((a,b)=>new Date(b.last?.created_at||b.match.created_at||0)-new Date(a.last?.created_at||a.match.created_at||0));
   wrap.innerHTML=rows.map(({match,partner,last})=>`<button class="conversation-row" data-real-chat-partner="${partner.id}"><div class="conversation-avatar" style="${avatarStyle(partner)}">${escapeHTML((partner.name||'?')[0])}</div><div class="conversation-copy"><div class="conversation-top"><span class="conversation-name">${escapeHTML(partner.name)}${verificationBadge(partner,true)}</span><span class="conversation-time">${formatMessageTime(last?.created_at||match.created_at)}</span></div><div class="conversation-preview">${escapeHTML(realMessagePreview(last))}</div></div><span></span></button>`).join('');
   $$('[data-real-chat-partner]').forEach(b=>b.addEventListener('click',()=>openRealChat(b.dataset.realChatPartner)));
+}
+
+async function renderProfileDashboard(){
+  const wrap=$('#profileDashboardContent');
+  if(!wrap)return;
+
+  if(!currentUser){
+    wrap.innerHTML='<div class="card mini"><h3>Sign in to see your profile dashboard</h3><p class="muted">Your match and conversation activity lives here once you are signed in.</p><button class="primary" data-nav="auth">Sign in</button></div>';
+    $('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
+    return;
+  }
+
+  if(!hasStoredProfile()){
+    wrap.innerHTML='<div class="card mini"><h3>Finish your profile first</h3><p class="muted">Once your profile is complete, this page will show how your connections are going.</p><button class="primary" data-nav="accountSettings">Go to account</button></div>';
+    $('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
+    return;
+  }
+
+  wrap.innerHTML='<div class="card mini"><strong>Checking your activity…</strong></div>';
+
+  try{await loadRealMatchingData(true)}catch(e){console.error(e);}
+
+  const profile=getUserProfile();
+  const matches=realMatchRows||[];
+  const matchIds=matches.map(m=>m.id);
+  let messages=[];
+  if(matchIds.length){
+    const {data,error}=await supabaseClient.from('messages')
+      .select('id,match_id,sender_id,message_text,voice_url,created_at')
+      .in('match_id',matchIds)
+      .order('created_at',{ascending:true});
+    if(!error)messages=data||[];
+  }
+
+  const sent=messages.filter(m=>m.sender_id===currentUser.id).length;
+  const received=messages.filter(m=>m.sender_id!==currentUser.id).length;
+  const conversationsStarted=new Set(messages.map(m=>m.match_id)).size;
+  const twoWayMatches=matches.filter(match=>{
+    const rows=messages.filter(m=>m.match_id===match.id);
+    const mine=rows.some(m=>m.sender_id===currentUser.id);
+    const theirs=rows.some(m=>m.sender_id!==currentUser.id);
+    return mine&&theirs;
+  }).length;
+  const responseRate=conversationsStarted?Math.round((twoWayMatches/conversationsStarted)*100):0;
+
+  const completenessFields=[
+    profile.name,profile.age,profile.area,profile.gender,profile.religion,
+    profile.goals?.length||profile.goal,profile.seekingGenders?.length,
+    profile.interests?.length,profile.bio,profile.personality
+  ];
+  const completeCount=completenessFields.filter(Boolean).length;
+  const completeness=Math.round((completeCount/completenessFields.length)*100);
+
+  const interests=(profile.interests||[]).slice(0,5);
+  const talkingPoints=[
+    ...(interests.length?interests.map(i=>`Ask what they enjoy most about ${i.toLowerCase()}.`):[]),
+    'Ask about something they are looking forward to this week.',
+    'Pick one detail from their profile and ask a follow-up instead of changing topics.',
+    'Share a little about yourself after you ask a question so it feels like a conversation, not an interview.'
+  ].slice(0,5);
+
+  let tip='Start with one specific question about something you both have in common.';
+  if(matches.length && conversationsStarted===0) tip='You have matches waiting — a simple, specific opener is better than just “hey.”';
+  else if(sent>received+3) tip='You are carrying more of the conversation right now. Try asking one open-ended question, then give them room to answer.';
+  else if(received>sent+3) tip='You have messages waiting on you. Replying to one detail they shared can make the conversation feel more natural.';
+  else if(responseRate>=60 && conversationsStarted>0) tip='Your conversations are becoming two-way. Keep using follow-up questions and shared interests to build momentum.';
+
+  wrap.innerHTML=`
+    <div class="profile-dashboard-grid">
+      <article class="card profile-summary-card">
+        <div class="profile-summary-top">
+          <div class="avatar profile-dashboard-avatar" style="${avatarStyle(profile)}">${escapeHTML((profile.name||'?')[0])}</div>
+          <div><span class="eyebrow">Your profile</span><h3>${escapeHTML(profile.name||'Your profile')}</h3><p class="muted">${completeness}% profile complete</p></div>
+        </div>
+        <div class="profile-progress"><span style="width:${completeness}%"></span></div>
+        <p class="muted">To change your answers, use <strong>Account → Edit profile</strong>.</p>
+        <button class="secondary" data-nav="accountSettings">Account settings</button>
+      </article>
+
+      <div class="profile-stats-grid">
+        <article class="card profile-stat"><strong>${matches.length}</strong><span>Matches</span></article>
+        <article class="card profile-stat"><strong>${conversationsStarted}</strong><span>Conversations started</span></article>
+        <article class="card profile-stat"><strong>${sent}</strong><span>Messages sent</span></article>
+        <article class="card profile-stat"><strong>${received}</strong><span>Messages received</span></article>
+        <article class="card profile-stat"><strong>${responseRate}%</strong><span>Two-way conversation rate</span></article>
+      </div>
+    </div>
+
+    <div class="profile-dashboard-grid profile-dashboard-lower">
+      <article class="card profile-guidance-card">
+        <span class="eyebrow">How it is going</span>
+        <h3>Conversation guidance</h3>
+        <p>${escapeHTML(tip)}</p>
+      </article>
+
+      <article class="card profile-guidance-card">
+        <span class="eyebrow">Talking points</span>
+        <h3>Keep the conversation moving</h3>
+        <ul class="why-list">${talkingPoints.map(t=>`<li>${escapeHTML(t)}</li>`).join('')}</ul>
+      </article>
+    </div>`;
+
+  $('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
 }
 
 function conversationStarter(u,m){
