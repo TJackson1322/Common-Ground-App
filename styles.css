@@ -426,3 +426,10 @@ input[type="color"]::-webkit-color-swatch{border:0;border-radius:12px}
 .profile-stat span{font-size:14px;color:var(--muted,#69736e)}
 .profile-dashboard-lower{margin-top:18px}
 @media (max-width:760px){.profile-dashboard-grid{grid-template-columns:1fr}.profile-stats-grid{grid-template-columns:repeat(2,1fr)}}
+
+.chat-helper-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.challenge-box{margin-top:12px}
+.challenge-card{padding:14px;border-radius:16px;background:rgba(31,40,36,.05);border:1px solid rgba(31,40,36,.10)}
+.challenge-card strong{display:block;font-size:16px;margin-top:4px}
+.challenge-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.challenge-actions button{width:auto}
