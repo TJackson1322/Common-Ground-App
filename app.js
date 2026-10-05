@@ -1,4 +1,4 @@
-console.info('Common Ground build v47 home discovery');
+console.info('Common Ground build v48 easier profile editing');
 const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
 let supabaseClient = null;
@@ -28,6 +28,7 @@ const demoProfiles = [
 ];
 
 let step = 1;
+let editProfileMode = false;
 let selectedInterests = new Set();
 let deferredPrompt = null;
 let activeChatId = null;
@@ -68,8 +69,14 @@ function bindNav(){
 }
 function showScreen(id){
   if(id==='accountSettings' && !currentUser) id='auth';
-  $$('.screen').forEach(s=>s.classList.remove('active'));
-  $(`#${id}`).classList.add('active');
+  if(id==='onboarding'){
+    editProfileMode=hasStoredProfile();
+    if(editProfileMode) restoreProfile();
+    step=1;
+    updateStep();
+  }
+  $('.screen').forEach(screen=>screen.classList.remove('active'));
+  $('#'+id).classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
   if(id==='home') renderHomeSuggestions();
   if(id==='matches') renderMatches();
@@ -83,7 +90,16 @@ function bindForm(){
     if(step<6){step++;updateStep();}
   });
   $('#prevBtn').addEventListener('click',()=>{if(step>1){step--;updateStep();}});
-  $('#profileForm').addEventListener('submit',async e=>{e.preventDefault();await saveProfile();await renderHomeSuggestions();showScreen('home');});
+  $('[data-edit-step]').forEach(btn=>btn.addEventListener('click',()=>{step=Number(btn.dataset.editStep);updateStep();}));
+  $('#profileForm').addEventListener('submit',async e=>{
+    e.preventDefault();
+    if(!validateBasics())return;
+    if(selectedInterests.size<3){alert('Choose at least three interests so the matching has something meaningful to work with.');return;}
+    await saveProfile();
+    editProfileMode=false;
+    await renderHomeSuggestions();
+    showScreen('home');
+  });
 }
 function validateBasics(){
   const form=$('#profileForm');
@@ -97,11 +113,27 @@ function validateBasics(){
   return true;
 }
 function updateStep(){
-  $$('.step').forEach(s=>s.classList.toggle('active',Number(s.dataset.step)===step));
-  $('#progressBar').style.width=`${(step/6)*100}%`;
-  $('#prevBtn').classList.toggle('hidden',step===1);
-  $('#nextBtn').classList.toggle('hidden',step===6);
-  $('#saveBtn').classList.toggle('hidden',step!==6);
+  $('.step').forEach(section=>section.classList.toggle('active',Number(section.dataset.step)===step));
+  const progress=$('.progress-wrap');
+  const editNav=$('#editProfileNav');
+  const saveBtn=$('#saveBtn');
+  if(editProfileMode){
+    if(progress)progress.classList.add('hidden');
+    if(editNav)editNav.classList.remove('hidden');
+    $('[data-edit-step]').forEach(btn=>btn.classList.toggle('active',Number(btn.dataset.editStep)===step));
+    $('#prevBtn').classList.add('hidden');
+    $('#nextBtn').classList.add('hidden');
+    saveBtn.classList.remove('hidden');
+    saveBtn.textContent='Save changes';
+  }else{
+    if(progress)progress.classList.remove('hidden');
+    if(editNav)editNav.classList.add('hidden');
+    $('#progressBar').style.width=`${(step/6)*100}%`;
+    $('#prevBtn').classList.toggle('hidden',step===1);
+    $('#nextBtn').classList.toggle('hidden',step===6);
+    saveBtn.classList.toggle('hidden',step!==6);
+    saveBtn.textContent='Save & find matches';
+  }
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
