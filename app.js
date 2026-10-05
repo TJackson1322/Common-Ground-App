@@ -75,7 +75,7 @@ function showScreen(id){
     step=1;
     updateStep();
   }
-  $('.screen').forEach(screen=>screen.classList.remove('active'));
+  $$('.screen').forEach(screen=>screen.classList.remove('active'));
   $('#'+id).classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
   if(id==='home') renderHomeSuggestions();
@@ -90,7 +90,7 @@ function bindForm(){
     if(step<6){step++;updateStep();}
   });
   $('#prevBtn').addEventListener('click',()=>{if(step>1){step--;updateStep();}});
-  $('[data-edit-step]').forEach(btn=>btn.addEventListener('click',()=>{step=Number(btn.dataset.editStep);updateStep();}));
+  $$('[data-edit-step]').forEach(btn=>btn.addEventListener('click',()=>{step=Number(btn.dataset.editStep);updateStep();}));
   $('#profileForm').addEventListener('submit',async e=>{
     e.preventDefault();
     if(!validateBasics())return;
@@ -113,14 +113,14 @@ function validateBasics(){
   return true;
 }
 function updateStep(){
-  $('.step').forEach(section=>section.classList.toggle('active',Number(section.dataset.step)===step));
+  $$('.step').forEach(section=>section.classList.toggle('active',Number(section.dataset.step)===step));
   const progress=$('.progress-wrap');
   const editNav=$('#editProfileNav');
   const saveBtn=$('#saveBtn');
   if(editProfileMode){
     if(progress)progress.classList.add('hidden');
     if(editNav)editNav.classList.remove('hidden');
-    $('[data-edit-step]').forEach(btn=>btn.classList.toggle('active',Number(btn.dataset.editStep)===step));
+    $$('[data-edit-step]').forEach(btn=>btn.classList.toggle('active',Number(btn.dataset.editStep)===step));
     $('#prevBtn').classList.add('hidden');
     $('#nextBtn').classList.add('hidden');
     saveBtn.classList.remove('hidden');
@@ -191,9 +191,9 @@ function restoreProfile(){
   const p=JSON.parse(raw),f=$('#profileForm');
   Object.entries(p).forEach(([k,v])=>{if(['personality','interests','deals','goals','seekingGenders'].includes(k))return;if(f.elements[k]&&typeof v!=='object')f.elements[k].value=v});
   const savedGoals=(Array.isArray(p.goals)&&p.goals.length)?p.goals:[p.goal].filter(Boolean);
-  $('[name="relationshipGoal"]').forEach(el=>el.checked=savedGoals.includes(el.value));
+  $$('[name="relationshipGoal"]').forEach(el=>el.checked=savedGoals.includes(el.value));
   const savedSeeking=Array.isArray(p.seekingGenders)?p.seekingGenders:[];
-  $('[name="seekingGender"]').forEach(el=>el.checked=savedSeeking.includes(el.value));
+  $$('[name="seekingGender"]').forEach(el=>el.checked=savedSeeking.includes(el.value));
   personalityTraits.forEach(t=>{if(p.personality?.[t.key]!==undefined){f.elements[t.key].value=p.personality[t.key];$(`#${t.key}Value`).textContent=p.personality[t.key];}});
   selectedInterests=new Set(p.interests||[]);$$('[data-interest]').forEach(b=>b.classList.toggle('selected',selectedInterests.has(b.dataset.interest)));
   if(p.deals){[['dealGoal','goal'],['dealSmoking','smoking'],['dealVaping','vaping'],['dealAlcohol','alcohol'],['dealCannabis','cannabis']].forEach(([el,key])=>{f.elements[el].checked=!!p.deals[key]});}
