@@ -1,4 +1,4 @@
-console.info('Common Ground build v57 sign-in restored');
+console.info('Common Ground build v58 sign-in fixed');
 const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
 let supabaseClient = null;
@@ -67,7 +67,7 @@ function renderInterests(){
 }
 
 function bindNav(){
-  $('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
+  $$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
   $('#newMatchesBtn')?.addEventListener('click',async()=>{
     markMatchesSeen();
     await renderHomeNotifications();
@@ -932,13 +932,13 @@ async function renderProfileDashboard(){
 
   if(!currentUser){
     wrap.innerHTML='<div class="card mini"><h3>Sign in to see your profile dashboard</h3><p class="muted">Your match and conversation activity lives here once you are signed in.</p><button class="primary" data-nav="auth">Sign in</button></div>';
-    $('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
+    $$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
     return;
   }
 
   if(!hasStoredProfile()){
     wrap.innerHTML='<div class="card mini"><h3>Finish your profile first</h3><p class="muted">Once your profile is complete, this page will show how your connections are going.</p><button class="primary" data-nav="accountSettings">Go to account</button></div>';
-    $('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
+    $$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
     return;
   }
 
@@ -1026,7 +1026,7 @@ async function renderProfileDashboard(){
       </article>
     </div>`;
 
-  $('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
+  $$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
 }
 
 const commonGroundTrivia=[
