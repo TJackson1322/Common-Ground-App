@@ -1,4 +1,4 @@
-console.info('Common Ground build v45 split matches and discovery');
+console.info('Common Ground build v46 profile colors');
 const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
 let supabaseClient = null;
@@ -266,6 +266,7 @@ function profileToDb(p,userId){
     gender:p.gender||null,
     seeking_genders:p.seekingGenders||[],
     religion:p.religion||null,
+    avatar_color:p.avatarColor||'#66786f',
     relationship_goals:(p.goals&&p.goals.length)?p.goals:[p.goal].filter(Boolean),
     relationship_goal:(p.goals&&p.goals.length?p.goals[0]:p.goal)||null,
     bio:p.bio||null,
@@ -300,7 +301,7 @@ function profileToDb(p,userId){
 function dbToProfile(r){
   return {
     name:r.first_name||'',age:r.age||18,area:r.area||'',radius:r.dating_radius||25,minAge:r.min_age||18,maxAge:r.max_age||99,
-    gender:r.gender||'',seekingGenders:r.seeking_genders||[],religion:r.religion||'Prefer not to say',
+    gender:r.gender||'',seekingGenders:r.seeking_genders||[],religion:r.religion||'Prefer not to say',avatarColor:r.avatar_color||'#66786f',
     goals:(r.relationship_goals&&r.relationship_goals.length)?r.relationship_goals:[r.relationship_goal||'Long-term relationship'],
     goal:(r.relationship_goals&&r.relationship_goals.length?r.relationship_goals[0]:r.relationship_goal)||'Long-term relationship',bio:r.bio||'',conflict:r.conflict_style||'Take some space, then talk',social:r.social_energy||'Balanced',planning:r.planning_style||'Plan the important things',children:r.children_preference||'I am open either way',
     alcohol:r.alcohol||'Never',nicotine:r.smoking||'Never',vaping:r.vaping||'Never',cannabis:r.cannabis||'Never',alcoholFree:r.alcohol_free||'No preference',dateDrinker:r.date_drinker||'Sometimes / depends',dateSmoker:r.date_smoker||'Sometimes / depends',dateVaper:r.date_vaper||'Sometimes / depends',dateCannabis:r.date_cannabis||'Sometimes / depends',dateSober:r.date_sober||'No preference',
@@ -634,6 +635,13 @@ async function loadRealMatchingData(force=false){
 }
 
 function candidateAreaText(m){return m.area?escapeHTML(m.area):'General area not listed'}
+function avatarStyle(person){
+  const color=/^#[0-9a-f]{6}$/i.test(person?.avatarColor||'')?person.avatarColor:'#66786f';
+  const hex=color.slice(1);
+  const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);
+  const light=(r*299+g*587+b*114)/1000>160;
+  return 'background:'+color+';color:'+(light?'#1f2824':'#ffffff');
+}
 
 function matchingDiagnostic(u){
   const rows=realCandidateProfiles.map(m=>({
@@ -684,7 +692,7 @@ async function renderMatches(){
 
   const cardHtml=({m,r},matchedCard=false)=>{
     const liked=realLikes.has(m.id);
-    return `<article class="card match-card"><div class="match-score">${r.score}%</div><div class="avatar">${escapeHTML((m.name||'?')[0])}</div><h3>${escapeHTML(m.name)}${verificationBadge(m,true)}, ${m.age}</h3>${verificationLine(m)}<div class="muted">${candidateAreaText(m)}</div><div class="tag-row"><span class="tag">${escapeHTML(m.goal)}</span><span class="tag">${escapeHTML(m.social)}</span><span class="tag">${escapeHTML(m.alcohol)}</span></div><ul class="why-list">${reasons(u,m,r).slice(0,3).map(x=>`<li>${escapeHTML(x)}</li>`).join('')}</ul><div class="match-actions"><button class="primary" data-real-detail="${m.id}">${matchedCard?'View match':'View profile'}</button>${matchedCard?`<button class="secondary" data-message-user="${m.id}">Message</button>`:(liked?`<button class="secondary" data-real-detail="${m.id}">Liked ✓</button>`:'')}</div></article>`;
+    return `<article class="card match-card"><div class="match-score">${r.score}%</div><div class="avatar" style="${avatarStyle(m)}">${escapeHTML((m.name||'?')[0])}</div><h3>${escapeHTML(m.name)}${verificationBadge(m,true)}, ${m.age}</h3>${verificationLine(m)}<div class="muted">${candidateAreaText(m)}</div><div class="tag-row"><span class="tag">${escapeHTML(m.goal)}</span><span class="tag">${escapeHTML(m.social)}</span><span class="tag">${escapeHTML(m.alcohol)}</span></div><ul class="why-list">${reasons(u,m,r).slice(0,3).map(x=>`<li>${escapeHTML(x)}</li>`).join('')}</ul><div class="match-actions"><button class="primary" data-real-detail="${m.id}">${matchedCard?'View match':'View profile'}</button>${matchedCard?`<button class="secondary" data-message-user="${m.id}">Message</button>`:(liked?`<button class="secondary" data-real-detail="${m.id}">Liked ✓</button>`:'')}</div></article>`;
   };
 
   const matchesHtml=`<section class="match-section"><div class="match-section-head"><div><span class="eyebrow">Your connections</span><h3>Matches</h3><p class="muted">People who liked you back.</p></div><span class="section-count">${matched.length}</span></div>${matched.length?`<div class="match-grid">${matched.map(x=>cardHtml(x,true)).join('')}</div>`:'<div class="card mini"><h3>No mutual matches yet</h3><p class="muted">When you and another person like each other, they’ll appear here.</p></div>'}</section>`;
@@ -796,7 +804,7 @@ async function renderConversations(){
     const partner=realCandidateProfiles.find(p=>p.id===partnerId);
     return {match,partner,last:lastByMatch.get(match.id)};
   }).filter(x=>x.partner).sort((a,b)=>new Date(b.last?.created_at||b.match.created_at||0)-new Date(a.last?.created_at||a.match.created_at||0));
-  wrap.innerHTML=rows.map(({match,partner,last})=>`<button class="conversation-row" data-real-chat-partner="${partner.id}"><div class="conversation-avatar">${escapeHTML((partner.name||'?')[0])}</div><div class="conversation-copy"><div class="conversation-top"><span class="conversation-name">${escapeHTML(partner.name)}${verificationBadge(partner,true)}</span><span class="conversation-time">${formatMessageTime(last?.created_at||match.created_at)}</span></div><div class="conversation-preview">${escapeHTML(realMessagePreview(last))}</div></div><span></span></button>`).join('');
+  wrap.innerHTML=rows.map(({match,partner,last})=>`<button class="conversation-row" data-real-chat-partner="${partner.id}"><div class="conversation-avatar" style="${avatarStyle(partner)}">${escapeHTML((partner.name||'?')[0])}</div><div class="conversation-copy"><div class="conversation-top"><span class="conversation-name">${escapeHTML(partner.name)}${verificationBadge(partner,true)}</span><span class="conversation-time">${formatMessageTime(last?.created_at||match.created_at)}</span></div><div class="conversation-preview">${escapeHTML(realMessagePreview(last))}</div></div><span></span></button>`).join('');
   $$('[data-real-chat-partner]').forEach(b=>b.addEventListener('click',()=>openRealChat(b.dataset.realChatPartner)));
 }
 
@@ -822,7 +830,7 @@ async function openRealChat(partnerId){
   activeRealChatPartnerId=partnerId;
   activeChatId=null;
   const starter=conversationStarter(getUserProfile(),partner);
-  $('#chatHeader').innerHTML=`<div class="conversation-avatar">${escapeHTML((partner.name||'?')[0])}</div><div class="chat-person"><div class="chat-title">${escapeHTML(partner.name)}${verificationBadge(partner,true)}</div><div class="chat-subtitle">Mutual match through Common Ground${partner.area?' · '+escapeHTML(partner.area):''}</div><div class="chat-starter"><strong>Need an opener?</strong> ${escapeHTML(starter)}</div><button class="secondary starter-use-btn" id="useStarterBtn" type="button">Use this question</button><div class="chat-safety-actions"><button class="ghost danger-lite" id="reportUserBtn" type="button">Report</button><button class="ghost danger-lite" id="blockUserBtn" type="button">Block</button></div></div>`;
+  $('#chatHeader').innerHTML=`<div class="conversation-avatar" style="${avatarStyle(partner)}">${escapeHTML((partner.name||'?')[0])}</div><div class="chat-person"><div class="chat-title">${escapeHTML(partner.name)}${verificationBadge(partner,true)}</div><div class="chat-subtitle">Mutual match through Common Ground${partner.area?' · '+escapeHTML(partner.area):''}</div><div class="chat-starter"><strong>Need an opener?</strong> ${escapeHTML(starter)}</div><button class="secondary starter-use-btn" id="useStarterBtn" type="button">Use this question</button><div class="chat-safety-actions"><button class="ghost danger-lite" id="reportUserBtn" type="button">Report</button><button class="ghost danger-lite" id="blockUserBtn" type="button">Block</button></div></div>`;
   $('#useStarterBtn')?.addEventListener('click',()=>{const input=$('#chatInput');if(input){input.value=starter;input.focus();}});
   $('#reportUserBtn')?.addEventListener('click',()=>reportRealUser(partnerId,partner.name));
   $('#blockUserBtn')?.addEventListener('click',()=>blockRealUser(partnerId,partner.name));
