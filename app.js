@@ -1,4 +1,4 @@
-console.info('Common Ground build v36 direct match messaging');
+console.info('Common Ground build v37 fixed match/profile messaging');
 const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
 let supabaseClient = null;
