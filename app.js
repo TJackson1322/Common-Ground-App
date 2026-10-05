@@ -1,4 +1,4 @@
-console.info('Common Ground build v46 profile colors');
+console.info('Common Ground build v47 home discovery');
 const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
 let supabaseClient = null;
@@ -47,6 +47,7 @@ async function init(){
   bindAuth();
   await initSupabase();
   initVerificationUI();
+  renderHomeSuggestions();
   renderMatches();
   renderConversations();
 }
@@ -70,6 +71,7 @@ function showScreen(id){
   $$('.screen').forEach(s=>s.classList.remove('active'));
   $(`#${id}`).classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
+  if(id==='home') renderHomeSuggestions();
   if(id==='matches') renderMatches();
   if(id==='messages') renderConversations();
 }
@@ -81,7 +83,7 @@ function bindForm(){
     if(step<6){step++;updateStep();}
   });
   $('#prevBtn').addEventListener('click',()=>{if(step>1){step--;updateStep();}});
-  $('#profileForm').addEventListener('submit',async e=>{e.preventDefault();await saveProfile();renderMatches();showScreen('matches');});
+  $('#profileForm').addEventListener('submit',async e=>{e.preventDefault();await saveProfile();await renderHomeSuggestions();showScreen('home');});
 }
 function validateBasics(){
   const form=$('#profileForm');
@@ -248,7 +250,7 @@ async function signInUser(){
   }
   setAuthMessage('Signed in.','success');
   showToast('Signed in to Common Ground.');
-  showScreen(hasStoredProfile()?'matches':'onboarding');
+  showScreen(hasStoredProfile()?'home':'onboarding');
 }
 async function signOutUser(){
   if(!supabaseClient)return;
@@ -652,54 +654,76 @@ function matchingDiagnostic(u){
   return {rows,counts};
 }
 
-async function renderMatches(){
-  const list=$('#matchList');
-  if(!list)return;
-  const u=getUserProfile();
-  const personalized=hasStoredProfile();
+async function renderHomeSuggestions(){
+  const section=$('#homeSuggestions');
+  const list=$('#homeSuggestionList');
+  if(!section||!list)return;
 
-  if(!currentUser){
-    $('#matchIntro').textContent=personalized?`Demo suggestions for ${u.name}, ages ${u.minAge??18}–${u.maxAge??99}. Sign in to see real members.`:'Complete your profile for personalized demo suggestions, then sign in to see real members.';
-    const scored=demoProfiles.map(m=>({m,r:calcMatch(u,m)})).filter(x=>!x.r.blocked).sort((a,b)=>b.r.score-a.r.score);
-    list.innerHTML=`<section class="match-section"><div class="match-section-head"><div><span class="eyebrow">Discover</span><h3>People You May Like</h3></div></div><div class="match-grid">${scored.map(({m,r})=>`<article class="card match-card"><div class="match-score">${r.score}%</div><div class="avatar">${m.name[0]}</div><h3>${m.name}${verificationBadge(m,true)}, ${m.age}</h3>${verificationLine(m)}<div class="muted">${m.area} · demo profile</div><div class="tag-row"><span class="tag">${m.goal}</span><span class="tag">${m.social}</span></div><button class="primary" data-demo-detail="${m.id}">View profile</button></article>`).join('')}</div></section>`;
-    $$('[data-demo-detail]').forEach(b=>b.addEventListener('click',()=>showDemoDetail(Number(b.dataset.demoDetail))));
+  if(!currentUser||!hasStoredProfile()){
+    section.classList.add('hidden');
+    list.innerHTML='';
     return;
   }
 
-  if(!personalized){
-    $('#matchIntro').textContent='Finish your profile first so Common Ground can calculate meaningful compatibility.';
-    list.innerHTML='<div class="card mini"><h3>Finish your profile</h3><p class="muted">Your age preferences, relationship goals, lifestyle, personality and interests are used before real profiles are shown.</p><button class="primary" data-nav="onboarding">Build my profile</button></div>';
-    $$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
-    return;
-  }
-
-  $('#matchIntro').textContent=`Connections and suggestions for ${u.name}, based on compatibility.`;
-  list.innerHTML='<div class="card mini"><strong>Finding your people…</strong><p class="muted">Loading matches and compatible members.</p></div>';
+  section.classList.remove('hidden');
+  list.innerHTML='<div class="card mini"><strong>Finding people you may like…</strong><p class="muted">Ranking compatible members by match percentage.</p></div>';
 
   try{await loadRealMatchingData(true)}catch(err){
-    list.innerHTML=`<div class="card mini"><h3>Real matching needs one Supabase update</h3><p class="muted">${escapeHTML(err.message||'Could not load matching data.')}</p><p class="muted">Run the <strong>SUPABASE-v26.sql</strong> file included in this build, then refresh.</p></div>`;
+    list.innerHTML=`<div class="card mini"><h3>Could not load suggestions</h3><p class="muted">${escapeHTML(err.message||'Please try again.')}</p></div>`;
     return;
   }
 
-  const eligible=realCandidateProfiles
-    .filter(m=>!realPasses.has(m.id))
+  const u=getUserProfile();
+  const suggestions=realCandidateProfiles
+    .filter(m=>!realPasses.has(m.id) && !realMatchPartnerIds.has(m.id))
     .map(m=>({m,r:calcMatch(u,m)}))
     .filter(x=>!x.r.blocked)
     .sort((a,b)=>b.r.score-a.r.score);
 
-  const matched=eligible.filter(x=>realMatchPartnerIds.has(x.m.id));
-  const suggestions=eligible.filter(x=>!realMatchPartnerIds.has(x.m.id));
+  if(!suggestions.length){
+    list.innerHTML='<div class="card mini"><h3>No new suggestions right now</h3><p class="muted">New compatible people will appear here as they join.</p></div>';
+    return;
+  }
 
-  const cardHtml=({m,r},matchedCard=false)=>{
-    const liked=realLikes.has(m.id);
-    return `<article class="card match-card"><div class="match-score">${r.score}%</div><div class="avatar" style="${avatarStyle(m)}">${escapeHTML((m.name||'?')[0])}</div><h3>${escapeHTML(m.name)}${verificationBadge(m,true)}, ${m.age}</h3>${verificationLine(m)}<div class="muted">${candidateAreaText(m)}</div><div class="tag-row"><span class="tag">${escapeHTML(m.goal)}</span><span class="tag">${escapeHTML(m.social)}</span><span class="tag">${escapeHTML(m.alcohol)}</span></div><ul class="why-list">${reasons(u,m,r).slice(0,3).map(x=>`<li>${escapeHTML(x)}</li>`).join('')}</ul><div class="match-actions"><button class="primary" data-real-detail="${m.id}">${matchedCard?'View match':'View profile'}</button>${matchedCard?`<button class="secondary" data-message-user="${m.id}">Message</button>`:(liked?`<button class="secondary" data-real-detail="${m.id}">Liked ✓</button>`:'')}</div></article>`;
-  };
+  list.innerHTML=suggestions.map(({m,r},index)=>`<article class="card home-person-card"><div class="home-person-rank">${index===0?'Best match':'#'+(index+1)}</div><div class="home-person-top"><div class="avatar" style="${avatarStyle(m)}">${escapeHTML((m.name||'?')[0])}</div><div><div class="match-score inline-score">${r.score}% match</div><h3>${escapeHTML(m.name)}${verificationBadge(m,true)}, ${m.age}</h3><div class="muted">${candidateAreaText(m)}</div></div></div><div class="tag-row"><span class="tag">${escapeHTML(m.goal)}</span><span class="tag">${escapeHTML(m.social)}</span><span class="tag">${escapeHTML(m.alcohol)}</span></div><ul class="why-list">${reasons(u,m,r).slice(0,3).map(x=>`<li>${escapeHTML(x)}</li>`).join('')}</ul><button class="primary" data-real-detail="${m.id}">View profile</button></article>`).join('');
 
-  const matchesHtml=`<section class="match-section"><div class="match-section-head"><div><span class="eyebrow">Your connections</span><h3>Matches</h3><p class="muted">People who liked you back.</p></div><span class="section-count">${matched.length}</span></div>${matched.length?`<div class="match-grid">${matched.map(x=>cardHtml(x,true)).join('')}</div>`:'<div class="card mini"><h3>No mutual matches yet</h3><p class="muted">When you and another person like each other, they’ll appear here.</p></div>'}</section>`;
+  $$('[data-real-detail]').forEach(b=>b.addEventListener('click',()=>showDetail(b.dataset.realDetail)));
+}
 
-  const suggestionsHtml=`<section class="match-section"><div class="match-section-head"><div><span class="eyebrow">Discover</span><h3>People You May Like</h3><p class="muted">Compatible people you haven’t matched with yet.</p></div><span class="section-count">${suggestions.length}</span></div>${suggestions.length?`<div class="match-grid">${suggestions.map(x=>cardHtml(x,false)).join('')}</div>`:'<div class="card mini"><h3>No new suggestions right now</h3><p class="muted">As more compatible people join, they’ll appear here.</p></div>'}</section>`;
+async function renderMatches(){
+  const list=$('#matchList');
+  if(!list)return;
 
-  list.innerHTML=matchesHtml+suggestionsHtml;
+  if(!currentUser){
+    $('#matchIntro').textContent='Sign in to see your mutual matches.';
+    list.innerHTML='<div class="card mini"><h3>No signed-in matches</h3><p class="muted">Sign in to see people who have matched with you.</p><button class="primary" data-nav="auth">Sign in</button></div>';
+    $$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
+    return;
+  }
+
+  $('#matchIntro').textContent='People who have mutually matched with you.';
+  list.innerHTML='<div class="card mini"><strong>Loading your matches…</strong></div>';
+
+  try{await loadRealMatchingData(true)}catch(err){
+    list.innerHTML=`<div class="card mini"><h3>Could not load matches</h3><p class="muted">${escapeHTML(err.message||'Please try again.')}</p></div>`;
+    return;
+  }
+
+  const u=getUserProfile();
+  const matched=realCandidateProfiles
+    .filter(m=>realMatchPartnerIds.has(m.id))
+    .map(m=>({m,r:calcMatch(u,m)}))
+    .filter(x=>!x.r.blocked)
+    .sort((a,b)=>b.r.score-a.r.score);
+
+  if(!matched.length){
+    list.innerHTML='<div class="card mini"><h3>No mutual matches yet</h3><p class="muted">People you both like will appear here. Check the Home page for new people you may like.</p><button class="primary" data-nav="home">See people you may like</button></div>';
+    $$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
+    return;
+  }
+
+  list.innerHTML=matched.map(({m,r})=>`<article class="card match-card"><div class="match-score">${r.score}%</div><div class="avatar" style="${avatarStyle(m)}">${escapeHTML((m.name||'?')[0])}</div><h3>${escapeHTML(m.name)}${verificationBadge(m,true)}, ${m.age}</h3>${verificationLine(m)}<div class="muted">${candidateAreaText(m)}</div><div class="tag-row"><span class="tag">${escapeHTML(m.goal)}</span><span class="tag">${escapeHTML(m.social)}</span><span class="tag">${escapeHTML(m.alcohol)}</span></div><ul class="why-list">${reasons(u,m,r).slice(0,3).map(x=>`<li>${escapeHTML(x)}</li>`).join('')}</ul><div class="match-actions"><button class="primary" data-real-detail="${m.id}">View match</button><button class="secondary" data-message-user="${m.id}">Message</button></div></article>`).join('');
+
   $$('[data-real-detail]').forEach(b=>b.addEventListener('click',()=>showDetail(b.dataset.realDetail)));
   $$('[data-message-user]').forEach(b=>b.addEventListener('click',()=>openRealChat(b.dataset.messageUser)));
 }
