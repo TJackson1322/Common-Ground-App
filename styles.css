@@ -395,3 +395,7 @@ textarea{min-height:100px;resize:vertical}
 .match-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
 .section-count{display:inline-flex;align-items:center;justify-content:center;min-width:38px;height:38px;padding:0 10px;border-radius:999px;background:var(--sand,#f1e7d3);font-weight:800}
 @media (max-width:760px){.match-grid{grid-template-columns:1fr}.match-section-head{align-items:flex-start}}
+
+input[type="color"]{width:100%;height:54px;padding:5px;border-radius:16px;cursor:pointer;background:#fff}
+input[type="color"]::-webkit-color-swatch-wrapper{padding:0}
+input[type="color"]::-webkit-color-swatch{border:0;border-radius:12px}
