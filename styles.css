@@ -449,3 +449,11 @@ input[type="color"]::-webkit-color-swatch{border:0;border-radius:12px}
 .game-bubble.playable{border:1px solid rgba(31,40,36,.12)}
 .game-bubble.waiting{opacity:.96}
 @media (max-width:620px){.game-choice-grid,.game-reveal{grid-template-columns:1fr}}
+
+.home-notification-bar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:26px}
+.home-notification{display:flex;align-items:center;gap:12px;text-align:left;padding:14px 16px;border:1px solid rgba(31,40,36,.12);border-radius:18px;background:#fff;cursor:pointer;font:inherit}
+.home-notification:hover{transform:translateY(-1px)}
+.home-notification .notification-icon{font-size:22px}
+.home-notification strong{display:block;font-size:16px}
+.home-notification small{display:block;margin-top:2px;color:var(--muted,#69736e);font-size:12px}
+@media (max-width:700px){.home-notification-bar{grid-template-columns:1fr}}
