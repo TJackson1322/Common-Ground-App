@@ -1,4 +1,4 @@
-console.info('Common Ground build v51 fixed dashboard navigation');
+console.info('Common Ground build v52 match game');
 const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
 let supabaseClient = null;
@@ -969,42 +969,67 @@ async function renderProfileDashboard(){
   $('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
 }
 
-const commonGroundChallenges=[
-  'Pick one: cozy night in or spontaneous night out?',
-  'What is your ideal way to spend a free Saturday?',
-  'Pick one: beach, mountains, or city trip?',
-  'What is one small thing that always makes your day better?',
-  'Pick one: plan everything or figure it out as you go?',
-  'What is something you could talk about for hours?',
-  'Pick one: early bird or night owl?',
-  'What is one place you would love to visit together someday?',
-  'Pick one: cook together or try a new restaurant?',
-  'What is your perfect low-key date?'
+const commonGroundGameRounds=[
+  {prompt:'Perfect Friday night?',a:'Cozy night in',b:'Go out somewhere fun'},
+  {prompt:'Pick your getaway.',a:'Beach trip',b:'Mountain cabin'},
+  {prompt:'How do you make plans?',a:'Plan it ahead',b:'Be spontaneous'},
+  {prompt:'Choose the date.',a:'Cook together',b:'Try a new restaurant'},
+  {prompt:'Weekend energy?',a:'Sleep in',b:'Up early and moving'},
+  {prompt:'Pick your entertainment.',a:'Movie night',b:'Live music'},
+  {prompt:'Choose the adventure.',a:'Road trip',b:'Fly somewhere new'},
+  {prompt:'Social battery?',a:'Small group',b:'Big crowd'},
+  {prompt:'Pick a Sunday.',a:'Relax at home',b:'Get out and do something'},
+  {prompt:'Choose your treat.',a:'Coffee date',b:'Dessert date'}
 ];
-
-function randomChallenge(){
-  return commonGroundChallenges[Math.floor(Math.random()*commonGroundChallenges.length)];
-}
 
 function renderChallengeBox(){
   const box=$('#challengeBox');
   if(!box)return;
-  const q=randomChallenge();
+  const roundIndex=Math.floor(Math.random()*commonGroundGameRounds.length);
+  const round=commonGroundGameRounds[roundIndex];
   box.classList.remove('hidden');
-  box.innerHTML=`<div class="challenge-card"><span class="eyebrow">Common Ground Challenge</span><strong>${escapeHTML(q)}</strong><p class="muted">Optional — send it if you want an easy way to keep the conversation going.</p><div class="challenge-actions"><button class="primary" id="sendChallengeBtn" type="button">Send challenge</button><button class="secondary" id="newChallengeBtn" type="button">New question</button><button class="ghost" id="closeChallengeBtn" type="button">Close</button></div></div>`;
-  $('#sendChallengeBtn')?.addEventListener('click',async()=>{
-    const text=`🎲 Common Ground Challenge: ${q}`;
-    const ok=await sendRealTextMessage(text);
+  box.innerHTML=`<div class="challenge-card game-start-card"><span class="eyebrow">Common Ground Match Game</span><strong>${escapeHTML(round.prompt)}</strong><p class="muted">Pick your answer. Your match makes their pick separately, then the game reveals whether you matched.</p><div class="game-choice-grid"><button class="secondary game-choice-btn" data-game-start="A" type="button">${escapeHTML(round.a)}</button><button class="secondary game-choice-btn" data-game-start="B" type="button">${escapeHTML(round.b)}</button></div><div class="challenge-actions"><button class="ghost" id="newChallengeBtn" type="button">Different round</button><button class="ghost" id="closeChallengeBtn" type="button">Close</button></div></div>`;
+
+  $$('[data-game-start]').forEach(btn=>btn.addEventListener('click',async()=>{
+    const choice=btn.dataset.gameStart;
+    const gameId=(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2));
+    const ok=await sendRealTextMessage(`CGGAME|${gameId}|${roundIndex}|${choice}`);
     if(ok){
       box.classList.add('hidden');
       box.innerHTML='';
       await renderRealChatMessages();
       await renderConversations();
     }
-  });
+  }));
   $('#newChallengeBtn')?.addEventListener('click',renderChallengeBox);
   $('#closeChallengeBtn')?.addEventListener('click',()=>{box.classList.add('hidden');box.innerHTML='';});
 }
+
+async function sendGameReply(gameId,choice){
+  const ok=await sendRealTextMessage(`CGGAME_REPLY|${gameId}|${choice}`);
+  if(ok){
+    await renderRealChatMessages();
+    await renderConversations();
+  }
+}
+
+function parseGameMessage(text=''){
+  if(!text.startsWith('CGGAME|'))return null;
+  const parts=text.split('|');
+  if(parts.length!==4)return null;
+  const roundIndex=Number(parts[2]);
+  const choice=parts[3];
+  if(!Number.isInteger(roundIndex)||!commonGroundGameRounds[roundIndex]||!['A','B'].includes(choice))return null;
+  return {gameId:parts[1],roundIndex,choice};
+}
+
+function parseGameReply(text=''){
+  if(!text.startsWith('CGGAME_REPLY|'))return null;
+  const parts=text.split('|');
+  if(parts.length!==3||!['A','B'].includes(parts[2]))return null;
+  return {gameId:parts[1],choice:parts[2]};
+}
+
 
 function conversationStarter(u,m){
   const shared=(m.interests||[]).filter(i=>(u.interests||[]).includes(i));
@@ -1028,7 +1053,7 @@ async function openRealChat(partnerId){
   activeRealChatPartnerId=partnerId;
   activeChatId=null;
   const starter=conversationStarter(getUserProfile(),partner);
-  $('#chatHeader').innerHTML=`<div class="conversation-avatar" style="${avatarStyle(partner)}">${escapeHTML((partner.name||'?')[0])}</div><div class="chat-person"><div class="chat-title">${escapeHTML(partner.name)}${verificationBadge(partner,true)}</div><div class="chat-subtitle">Mutual match through Common Ground${partner.area?' · '+escapeHTML(partner.area):''}</div><div class="chat-starter"><strong>Need an opener?</strong> ${escapeHTML(starter)}</div><div class="chat-helper-actions"><button class="secondary starter-use-btn" id="useStarterBtn" type="button">Use this question</button><button class="secondary" id="challengeBtn" type="button">🎲 Common Ground Challenge</button></div><div id="challengeBox" class="challenge-box hidden"></div><div class="chat-safety-actions"><button class="ghost danger-lite" id="reportUserBtn" type="button">Report</button><button class="ghost danger-lite" id="blockUserBtn" type="button">Block</button></div></div>`;
+  $('#chatHeader').innerHTML=`<div class="conversation-avatar" style="${avatarStyle(partner)}">${escapeHTML((partner.name||'?')[0])}</div><div class="chat-person"><div class="chat-title">${escapeHTML(partner.name)}${verificationBadge(partner,true)}</div><div class="chat-subtitle">Mutual match through Common Ground${partner.area?' · '+escapeHTML(partner.area):''}</div><div class="chat-starter"><strong>Need an opener?</strong> ${escapeHTML(starter)}</div><div class="chat-helper-actions"><button class="secondary starter-use-btn" id="useStarterBtn" type="button">Use this question</button><button class="secondary" id="challengeBtn" type="button">🎮 Match Game</button></div><div id="challengeBox" class="challenge-box hidden"></div><div class="chat-safety-actions"><button class="ghost danger-lite" id="reportUserBtn" type="button">Report</button><button class="ghost danger-lite" id="blockUserBtn" type="button">Block</button></div></div>`;
   $('#useStarterBtn')?.addEventListener('click',()=>{const input=$('#chatInput');if(input){input.value=starter;input.focus();}});
   $('#challengeBtn')?.addEventListener('click',renderChallengeBox);
   $('#reportUserBtn')?.addEventListener('click',()=>reportRealUser(partnerId,partner.name));
