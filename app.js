@@ -835,6 +835,8 @@ async function fetchMessagesForMatch(matchId){
 
 function realMessagePreview(msg){
   if(!msg)return 'You matched — say hello.';
+  if(msg.message_text?.startsWith('CGGAME|'))return '🎮 Common Ground Match Game';
+  if(msg.message_text?.startsWith('CGGAME_REPLY|'))return '🎮 Match Game answer';
   if(msg.message_text)return msg.message_text;
   if(msg.voice_url)return 'Voice memo';
   return 'New message';
@@ -1189,9 +1191,41 @@ async function renderRealChatMessages(){
   const wrap=$('#chatMessages');
   try{
     const messages=await fetchMessagesForMatch(activeRealChatMatchId);
+    const replies=new Map();
+    for(const msg of messages){
+      const reply=parseGameReply(msg.message_text||'');
+      if(reply)replies.set(reply.gameId,{...reply,senderId:msg.sender_id,createdAt:msg.created_at});
+    }
+
     const rows=[];
     for(const msg of messages){
       const mine=msg.sender_id===currentUser.id;
+      const game=parseGameMessage(msg.message_text||'');
+      const gameReply=parseGameReply(msg.message_text||'');
+
+      if(gameReply)continue;
+
+      if(game){
+        const round=commonGroundGameRounds[game.roundIndex];
+        const reply=replies.get(game.gameId);
+        const myStarterChoice=game.choice;
+        const starterLabel=myStarterChoice==='A'?round.a:round.b;
+
+        if(reply && reply.senderId!==msg.sender_id){
+          const replyLabel=reply.choice==='A'?round.a:round.b;
+          const matched=reply.choice===myStarterChoice;
+          const starterIsMe=mine;
+          const myLabel=starterIsMe?starterLabel:replyLabel;
+          const theirLabel=starterIsMe?replyLabel:starterLabel;
+          rows.push(`<div class="message-row game-message-row"><div class="message-bubble game-bubble revealed"><div class="game-result-icon">${matched?'🎉':'✨'}</div><strong>${matched?'You matched!':'Different picks!'}</strong><div class="game-prompt">${escapeHTML(round.prompt)}</div><div class="game-reveal"><span><small>You picked</small>${escapeHTML(myLabel)}</span><span><small>They picked</small>${escapeHTML(theirLabel)}</span></div><p class="muted">${matched?'You found a little more common ground.':'Different answers can make a good conversation too.'}</p><span class="message-meta">${formatMessageTime(reply.createdAt||msg.created_at)}</span></div></div>`);
+        }else if(mine){
+          rows.push(`<div class="message-row mine game-message-row"><div class="message-bubble game-bubble waiting"><span class="eyebrow">Match Game</span><strong>${escapeHTML(round.prompt)}</strong><p>You picked <b>${escapeHTML(starterLabel)}</b>.</p><p class="muted">Waiting for your match to make their pick…</p><span class="message-meta">${formatMessageTime(msg.created_at)}</span></div></div>`);
+        }else{
+          rows.push(`<div class="message-row game-message-row"><div class="message-bubble game-bubble playable"><span class="eyebrow">Match Game</span><strong>${escapeHTML(round.prompt)}</strong><p class="muted">Their answer is locked. Make your pick to reveal both answers.</p><div class="game-choice-grid"><button class="game-choice-btn secondary" data-game-reply="${escapeHTML(game.gameId)}" data-choice="A" type="button">${escapeHTML(round.a)}</button><button class="game-choice-btn secondary" data-game-reply="${escapeHTML(game.gameId)}" data-choice="B" type="button">${escapeHTML(round.b)}</button></div><span class="message-meta">${formatMessageTime(msg.created_at)}</span></div></div>`);
+        }
+        continue;
+      }
+
       if(msg.voice_url){
         const playback=await getRealVoicePlaybackUrl(msg.voice_url);
         const dur=msg.voice_duration_seconds?formatDuration(msg.voice_duration_seconds):'Voice memo';
@@ -1200,9 +1234,19 @@ async function renderRealChatMessages(){
         rows.push(`<div class="message-row ${mine?'mine':''}"><div class="message-bubble">${escapeHTML(msg.message_text||'')}<span class="message-meta">${formatMessageTime(msg.created_at)}</span></div></div>`);
       }
     }
+
     wrap.innerHTML=rows.length?rows.join(''):'<div class="empty-messages"><p class="muted">You matched. Say hello when you’re ready.</p></div>';
+    $$('[data-game-reply]').forEach(btn=>btn.addEventListener('click',async()=>{
+      const gameId=btn.dataset.gameReply;
+      const choice=btn.dataset.choice;
+      $$('[data-game-reply="'+gameId+'"]').forEach(b=>b.disabled=true);
+      await sendGameReply(gameId,choice);
+    }));
     requestAnimationFrame(()=>{wrap.scrollTop=wrap.scrollHeight});
-  }catch(err){wrap.innerHTML='<div class="empty-messages"><p class="muted">Could not load messages. Refresh and try again.</p></div>';}
+  }catch(err){
+    console.error('Chat render failed',err);
+    wrap.innerHTML='<div class="empty-messages"><p class="muted">Could not load messages. Refresh and try again.</p></div>';
+  }
 }
 
 function startRealChatPolling(){
