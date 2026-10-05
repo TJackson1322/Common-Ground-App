@@ -9,9 +9,9 @@
   <link rel="icon" href="icon-192.png?v=22" sizes="192x192" type="image/png" />
   <link rel="icon" href="icon-512.png?v=22" sizes="512x512" type="image/png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=22" />
-  <link rel="stylesheet" href="styles.css?v=47" />
+  <link rel="stylesheet" href="styles.css?v=48" />
   <title>Common Ground</title>
-  <meta name="cg-build" content="47" />
+  <meta name="cg-build" content="48" />
 </head>
 <body>
   <main class="app-shell">
@@ -123,6 +123,15 @@
       <div class="section-head">
         <div><span class="eyebrow">Your profile</span><h2>Tell us what actually matters.</h2><button class="ghost inline-link" type="button" data-nav="about">About & safety</button></div>
         <div class="progress-wrap"><div id="progressBar" class="progress"></div></div>
+      </div>
+
+      <div id="editProfileNav" class="edit-profile-nav hidden" aria-label="Profile sections">
+        <button type="button" data-edit-step="1">Basics</button>
+        <button type="button" data-edit-step="2">Personality</button>
+        <button type="button" data-edit-step="3">Daily Life</button>
+        <button type="button" data-edit-step="4">Lifestyle</button>
+        <button type="button" data-edit-step="5">Interests</button>
+        <button type="button" data-edit-step="6">Deal-breakers</button>
       </div>
 
       <form id="profileForm" class="card form-card">
@@ -294,8 +303,8 @@
     </nav>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=47"></script>
-  <!-- Common Ground beta build v47 -->
+  <script src="app.js?v=48"></script>
+  <!-- Common Ground beta build v48 -->
   <script>
     // Development build: remove older service workers/caches so GitHub Pages updates immediately.
     if ('serviceWorker' in navigator) {
