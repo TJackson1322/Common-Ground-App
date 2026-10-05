@@ -1,4 +1,4 @@
-console.info('Common Ground build v52 match game');
+console.info('Common Ground build v53 better home actions');
 const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
 let supabaseClient = null;
@@ -66,7 +66,14 @@ function renderInterests(){
 }
 
 function bindNav(){
-  $$('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
+  $('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
+  $('#discoverPeopleBtn')?.addEventListener('click',async()=>{
+    await renderHomeSuggestions();
+    const section=$('#homeSuggestions');
+    if(section){
+      section.scrollIntoView({behavior:'smooth',block:'start'});
+    }
+  });
 }
 function showScreen(id){
   if(id==='accountSettings' && !currentUser) id='auth';
