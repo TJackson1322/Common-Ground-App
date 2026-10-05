@@ -1,4 +1,4 @@
-console.info('Common Ground build v37 fixed match/profile messaging');
+console.info('Common Ground build v38 interests + smarter starters');
 const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
 let supabaseClient = null;
@@ -17,7 +17,7 @@ const personalityTraits = [
   { key:'emotionalStability', title:'Emotional steadiness', low:'Feel things intensely', high:'Usually even-keeled' }
 ];
 
-const interests = ['Family time','Racing / motorsports','Travel','Movies','Reading','Gaming','Fitness','Cooking','Music','Concerts','Outdoors','Camping','Hiking','Sports','Pets','Art / design','Technology','DIY projects','Coffee shops','Restaurants','Volunteering','Faith / spirituality','Board games','Photography'];
+const interests = ['Family time','Racing / motorsports','Travel','Movies','Reading','Gaming','Fitness','Exercise / gym','Running','Homebody','Cooking','Music','Concerts','Outdoors','Camping','Hiking','Sports','Pets','Art / design','Technology','DIY projects','Coffee shops','Restaurants','Volunteering','Faith / spirituality','Board games','Photography'];
 
 const demoProfiles = [
   {id:1,name:'Jordan',age:32,verifiedNameAge:true,area:'Louisville area',distance:12,goal:'Long-term relationship',conflict:'Take some space, then talk',social:'Balanced',planning:'Plan the important things',children:'I have children',alcohol:'Occasionally',nicotine:'Never',vaping:'Never',cannabis:'Never',alcoholFree:'Sometimes',interests:['Family time','Racing / motorsports','Movies','Restaurants','Outdoors','Technology'],bio:'Parent, weekend adventurer, and the person who always knows a good hole-in-the-wall restaurant.',personality:{openness:72,conscientiousness:75,extraversion:52,agreeableness:78,emotionalStability:69}},
@@ -790,7 +790,11 @@ async function renderConversations(){
 
 function conversationStarter(u,m){
   const shared=(m.interests||[]).filter(i=>(u.interests||[]).includes(i));
-  if(shared.length)return `You both like ${shared[0]}. What got you into it?`;
+  if(shared.includes('Family time'))return 'You both value family time. What does a perfect family day look like to you?';
+  if(shared.includes('Homebody'))return 'You both enjoy being homebodies. What is your ideal night in?';
+  if(shared.includes('Exercise / gym'))return 'You both enjoy the gym. What kind of workouts do you like most?';
+  if(shared.includes('Running'))return 'You both enjoy running. Are you more into casual runs, races, or just getting outside?';
+  if(shared.length)return `You both like ${shared[0]}. What do you enjoy most about it?`;
   if((u.religion&&m.religion)&&u.religion===m.religion&&u.religion!=='Prefer not to say')return `What does ${u.religion} mean in your everyday life?`;
   if(goalList(u).includes('Friends only / platonic friendship')||goalList(m).includes('Friends only / platonic friendship'))return 'What is something you always enjoy doing with friends?';
   return 'What is something you are looking forward to this week?';
