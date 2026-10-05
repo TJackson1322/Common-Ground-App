@@ -1,4 +1,4 @@
-console.info('Common Ground build v55 trivia game');
+console.info('Common Ground build v56 fixed startup navigation');
 const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
 let supabaseClient = null;
