@@ -1,4 +1,4 @@
-console.info('Common Ground build v54 home notifications');
+console.info('Common Ground build v55 trivia game');
 const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
 let supabaseClient = null;
@@ -893,8 +893,8 @@ async function fetchMessagesForMatch(matchId){
 
 function realMessagePreview(msg){
   if(!msg)return 'You matched — say hello.';
-  if(msg.message_text?.startsWith('CGGAME|'))return '🎮 Common Ground Match Game';
-  if(msg.message_text?.startsWith('CGGAME_REPLY|'))return '🎮 Match Game answer';
+  if(msg.message_text?.startsWith('CGTRIVIA|'))return '🧠 Trivia round';
+  if(msg.message_text?.startsWith('CGTRIVIA_REPLY|'))return '🧠 Trivia answer';
   if(msg.message_text)return msg.message_text;
   if(msg.voice_url)return 'Voice memo';
   return 'New message';
@@ -1029,65 +1029,59 @@ async function renderProfileDashboard(){
   $('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>showScreen(btn.dataset.nav)));
 }
 
-const commonGroundGameRounds=[
-  {prompt:'Perfect Friday night?',a:'Cozy night in',b:'Go out somewhere fun'},
-  {prompt:'Pick your getaway.',a:'Beach trip',b:'Mountain cabin'},
-  {prompt:'How do you make plans?',a:'Plan it ahead',b:'Be spontaneous'},
-  {prompt:'Choose the date.',a:'Cook together',b:'Try a new restaurant'},
-  {prompt:'Weekend energy?',a:'Sleep in',b:'Up early and moving'},
-  {prompt:'Pick your entertainment.',a:'Movie night',b:'Live music'},
-  {prompt:'Choose the adventure.',a:'Road trip',b:'Fly somewhere new'},
-  {prompt:'Social battery?',a:'Small group',b:'Big crowd'},
-  {prompt:'Pick a Sunday.',a:'Relax at home',b:'Get out and do something'},
-  {prompt:'Choose your treat.',a:'Coffee date',b:'Dessert date'}
+const commonGroundTrivia=[
+  {q:'Which planet is known as the Red Planet?',choices:['Venus','Mars','Jupiter','Mercury'],answer:1},
+  {q:'How many continents are there?',choices:['5','6','7','8'],answer:2},
+  {q:'What is the largest ocean on Earth?',choices:['Atlantic','Indian','Pacific','Arctic'],answer:2},
+  {q:'Which animal is the fastest on land?',choices:['Lion','Cheetah','Horse','Greyhound'],answer:1},
+  {q:'What is the capital of Italy?',choices:['Madrid','Rome','Athens','Paris'],answer:1},
+  {q:'Which instrument has 88 keys?',choices:['Violin','Piano','Guitar','Flute'],answer:1},
+  {q:'How many sides does a hexagon have?',choices:['5','6','7','8'],answer:1},
+  {q:'Which country is famous for the pyramids of Giza?',choices:['Mexico','Egypt','Greece','India'],answer:1},
+  {q:'What do bees make?',choices:['Milk','Silk','Honey','Wax only'],answer:2},
+  {q:'Which season comes after summer?',choices:['Spring','Winter','Fall','Monsoon'],answer:2},
+  {q:'What is H2O commonly called?',choices:['Salt','Water','Oxygen','Hydrogen'],answer:1},
+  {q:'Which sport uses a touchdown?',choices:['Baseball','Football','Basketball','Hockey'],answer:1}
 ];
 
-function renderChallengeBox(){
-  const box=$('#challengeBox');
-  if(!box)return;
-  const roundIndex=Math.floor(Math.random()*commonGroundGameRounds.length);
-  const round=commonGroundGameRounds[roundIndex];
-  box.classList.remove('hidden');
-  box.innerHTML=`<div class="challenge-card game-start-card"><span class="eyebrow">Common Ground Match Game</span><strong>${escapeHTML(round.prompt)}</strong><p class="muted">Pick your answer. Your match makes their pick separately, then the game reveals whether you matched.</p><div class="game-choice-grid"><button class="secondary game-choice-btn" data-game-start="A" type="button">${escapeHTML(round.a)}</button><button class="secondary game-choice-btn" data-game-start="B" type="button">${escapeHTML(round.b)}</button></div><div class="challenge-actions"><button class="ghost" id="newChallengeBtn" type="button">Different round</button><button class="ghost" id="closeChallengeBtn" type="button">Close</button></div></div>`;
-
-  $$('[data-game-start]').forEach(btn=>btn.addEventListener('click',async()=>{
-    const choice=btn.dataset.gameStart;
-    const gameId=(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2));
-    const ok=await sendRealTextMessage(`CGGAME|${gameId}|${roundIndex}|${choice}`);
-    if(ok){
-      box.classList.add('hidden');
-      box.innerHTML='';
-      await renderRealChatMessages();
-      await renderConversations();
-    }
-  }));
-  $('#newChallengeBtn')?.addEventListener('click',renderChallengeBox);
-  $('#closeChallengeBtn')?.addEventListener('click',()=>{box.classList.add('hidden');box.innerHTML='';});
+function randomTriviaIndex(){
+  return Math.floor(Math.random()*commonGroundTrivia.length);
 }
 
-async function sendGameReply(gameId,choice){
-  const ok=await sendRealTextMessage(`CGGAME_REPLY|${gameId}|${choice}`);
+async function startTriviaRound(){
+  if(!activeRealChatMatchId||!currentUser)return;
+  const triviaId=(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2));
+  const qIndex=randomTriviaIndex();
+  const ok=await sendRealTextMessage(`CGTRIVIA|${triviaId}|${qIndex}`);
   if(ok){
     await renderRealChatMessages();
     await renderConversations();
   }
 }
 
-function parseGameMessage(text=''){
-  if(!text.startsWith('CGGAME|'))return null;
-  const parts=text.split('|');
-  if(parts.length!==4)return null;
-  const roundIndex=Number(parts[2]);
-  const choice=parts[3];
-  if(!Number.isInteger(roundIndex)||!commonGroundGameRounds[roundIndex]||!['A','B'].includes(choice))return null;
-  return {gameId:parts[1],roundIndex,choice};
+async function sendTriviaReply(triviaId,choice){
+  const ok=await sendRealTextMessage(`CGTRIVIA_REPLY|${triviaId}|${choice}`);
+  if(ok){
+    await renderRealChatMessages();
+    await renderConversations();
+  }
 }
 
-function parseGameReply(text=''){
-  if(!text.startsWith('CGGAME_REPLY|'))return null;
+function parseTriviaMessage(text=''){
+  if(!text.startsWith('CGTRIVIA|'))return null;
   const parts=text.split('|');
-  if(parts.length!==3||!['A','B'].includes(parts[2]))return null;
-  return {gameId:parts[1],choice:parts[2]};
+  if(parts.length!==3)return null;
+  const qIndex=Number(parts[2]);
+  if(!Number.isInteger(qIndex)||!commonGroundTrivia[qIndex])return null;
+  return {triviaId:parts[1],qIndex};
+}
+
+function parseTriviaReply(text=''){
+  if(!text.startsWith('CGTRIVIA_REPLY|'))return null;
+  const parts=text.split('|');
+  const choice=Number(parts[2]);
+  if(parts.length!==3||!Number.isInteger(choice)||choice<0||choice>3)return null;
+  return {triviaId:parts[1],choice};
 }
 
 
@@ -1113,9 +1107,8 @@ async function openRealChat(partnerId){
   activeRealChatPartnerId=partnerId;
   activeChatId=null;
   const starter=conversationStarter(getUserProfile(),partner);
-  $('#chatHeader').innerHTML=`<div class="conversation-avatar" style="${avatarStyle(partner)}">${escapeHTML((partner.name||'?')[0])}</div><div class="chat-person"><div class="chat-title">${escapeHTML(partner.name)}${verificationBadge(partner,true)}</div><div class="chat-subtitle">Mutual match through Common Ground${partner.area?' · '+escapeHTML(partner.area):''}</div><div class="chat-starter"><strong>Need an opener?</strong> ${escapeHTML(starter)}</div><div class="chat-helper-actions"><button class="secondary starter-use-btn" id="useStarterBtn" type="button">Use this question</button><button class="secondary" id="challengeBtn" type="button">🎮 Match Game</button></div><div id="challengeBox" class="challenge-box hidden"></div><div class="chat-safety-actions"><button class="ghost danger-lite" id="reportUserBtn" type="button">Report</button><button class="ghost danger-lite" id="blockUserBtn" type="button">Block</button></div></div>`;
+  $('#chatHeader').innerHTML=`<div class="conversation-avatar" style="${avatarStyle(partner)}">${escapeHTML((partner.name||'?')[0])}</div><div class="chat-person"><div class="chat-title">${escapeHTML(partner.name)}${verificationBadge(partner,true)}</div><div class="chat-subtitle">Mutual match through Common Ground${partner.area?' · '+escapeHTML(partner.area):''}</div><div class="chat-starter"><strong>Need an opener?</strong> ${escapeHTML(starter)}</div><div class="chat-helper-actions"><button class="secondary starter-use-btn" id="useStarterBtn" type="button">Use this question</button></div><div class="chat-safety-actions"><button class="ghost danger-lite" id="reportUserBtn" type="button">Report</button><button class="ghost danger-lite" id="blockUserBtn" type="button">Block</button></div></div>`;
   $('#useStarterBtn')?.addEventListener('click',()=>{const input=$('#chatInput');if(input){input.value=starter;input.focus();}});
-  $('#challengeBtn')?.addEventListener('click',renderChallengeBox);
   $('#reportUserBtn')?.addEventListener('click',()=>reportRealUser(partnerId,partner.name));
   $('#blockUserBtn')?.addEventListener('click',()=>blockRealUser(partnerId,partner.name));
   const voiceBtn=$('#voiceMemoBtn');
@@ -1249,37 +1242,44 @@ async function renderRealChatMessages(){
   const wrap=$('#chatMessages');
   try{
     const messages=await fetchMessagesForMatch(activeRealChatMatchId);
-    const replies=new Map();
+    const repliesByTrivia=new Map();
+
     for(const msg of messages){
-      const reply=parseGameReply(msg.message_text||'');
-      if(reply)replies.set(reply.gameId,{...reply,senderId:msg.sender_id,createdAt:msg.created_at});
+      const reply=parseTriviaReply(msg.message_text||'');
+      if(reply){
+        if(!repliesByTrivia.has(reply.triviaId))repliesByTrivia.set(reply.triviaId,[]);
+        repliesByTrivia.get(reply.triviaId).push({...reply,senderId:msg.sender_id,createdAt:msg.created_at});
+      }
     }
 
     const rows=[];
     for(const msg of messages){
       const mine=msg.sender_id===currentUser.id;
-      const game=parseGameMessage(msg.message_text||'');
-      const gameReply=parseGameReply(msg.message_text||'');
+      const trivia=parseTriviaMessage(msg.message_text||'');
+      const triviaReply=parseTriviaReply(msg.message_text||'');
 
-      if(gameReply)continue;
+      if(triviaReply)continue;
 
-      if(game){
-        const round=commonGroundGameRounds[game.roundIndex];
-        const reply=replies.get(game.gameId);
-        const myStarterChoice=game.choice;
-        const starterLabel=myStarterChoice==='A'?round.a:round.b;
+      if(trivia){
+        const item=commonGroundTrivia[trivia.qIndex];
+        const replies=repliesByTrivia.get(trivia.triviaId)||[];
+        const myReply=replies.find(r=>r.senderId===currentUser.id);
+        const theirReply=replies.find(r=>r.senderId!==currentUser.id);
 
-        if(reply && reply.senderId!==msg.sender_id){
-          const replyLabel=reply.choice==='A'?round.a:round.b;
-          const matched=reply.choice===myStarterChoice;
-          const starterIsMe=mine;
-          const myLabel=starterIsMe?starterLabel:replyLabel;
-          const theirLabel=starterIsMe?replyLabel:starterLabel;
-          rows.push(`<div class="message-row game-message-row"><div class="message-bubble game-bubble revealed"><div class="game-result-icon">${matched?'🎉':'✨'}</div><strong>${matched?'You matched!':'Different picks!'}</strong><div class="game-prompt">${escapeHTML(round.prompt)}</div><div class="game-reveal"><span><small>You picked</small>${escapeHTML(myLabel)}</span><span><small>They picked</small>${escapeHTML(theirLabel)}</span></div><p class="muted">${matched?'You found a little more common ground.':'Different answers can make a good conversation too.'}</p><span class="message-meta">${formatMessageTime(reply.createdAt||msg.created_at)}</span></div></div>`);
-        }else if(mine){
-          rows.push(`<div class="message-row mine game-message-row"><div class="message-bubble game-bubble waiting"><span class="eyebrow">Match Game</span><strong>${escapeHTML(round.prompt)}</strong><p>You picked <b>${escapeHTML(starterLabel)}</b>.</p><p class="muted">Waiting for your match to make their pick…</p><span class="message-meta">${formatMessageTime(msg.created_at)}</span></div></div>`);
+        if(myReply&&theirReply){
+          const myCorrect=myReply.choice===item.answer;
+          const theirCorrect=theirReply.choice===item.answer;
+          let result='Nice round!';
+          if(myCorrect&&theirCorrect)result='You both got it right! 🎉';
+          else if(myCorrect&&!theirCorrect)result='You got it right! 🧠';
+          else if(!myCorrect&&theirCorrect)result='They got it right! 👏';
+          else result='That one got both of you 😄';
+
+          rows.push(`<div class="message-row trivia-row"><div class="message-bubble trivia-card revealed"><span class="eyebrow">Trivia</span><strong>${escapeHTML(item.q)}</strong><div class="trivia-result">${escapeHTML(result)}</div><p><b>Correct answer:</b> ${escapeHTML(item.choices[item.answer])}</p><div class="trivia-answer-grid"><span><small>You chose</small>${escapeHTML(item.choices[myReply.choice])}</span><span><small>They chose</small>${escapeHTML(item.choices[theirReply.choice])}</span></div><button class="secondary" data-new-trivia type="button">Play another round</button><span class="message-meta">${formatMessageTime(theirReply.createdAt||myReply.createdAt||msg.created_at)}</span></div></div>`);
+        }else if(myReply){
+          rows.push(`<div class="message-row trivia-row"><div class="message-bubble trivia-card waiting"><span class="eyebrow">Trivia</span><strong>${escapeHTML(item.q)}</strong><p>You picked <b>${escapeHTML(item.choices[myReply.choice])}</b>.</p><p class="muted">Waiting for your match to answer…</p><span class="message-meta">${formatMessageTime(msg.created_at)}</span></div></div>`);
         }else{
-          rows.push(`<div class="message-row game-message-row"><div class="message-bubble game-bubble playable"><span class="eyebrow">Match Game</span><strong>${escapeHTML(round.prompt)}</strong><p class="muted">Their answer is locked. Make your pick to reveal both answers.</p><div class="game-choice-grid"><button class="game-choice-btn secondary" data-game-reply="${escapeHTML(game.gameId)}" data-choice="A" type="button">${escapeHTML(round.a)}</button><button class="game-choice-btn secondary" data-game-reply="${escapeHTML(game.gameId)}" data-choice="B" type="button">${escapeHTML(round.b)}</button></div><span class="message-meta">${formatMessageTime(msg.created_at)}</span></div></div>`);
+          rows.push(`<div class="message-row trivia-row"><div class="message-bubble trivia-card playable"><span class="eyebrow">Trivia</span><strong>${escapeHTML(item.q)}</strong><div class="trivia-choice-grid">${item.choices.map((choice,index)=>`<button class="secondary trivia-choice-btn" data-trivia-reply="${escapeHTML(trivia.triviaId)}" data-choice="${index}" type="button">${escapeHTML(choice)}</button>`).join('')}</div><span class="message-meta">${formatMessageTime(msg.created_at)}</span></div></div>`);
         }
         continue;
       }
@@ -1293,13 +1293,16 @@ async function renderRealChatMessages(){
       }
     }
 
-    wrap.innerHTML=rows.length?rows.join(''):'<div class="empty-messages"><p class="muted">You matched. Say hello when you’re ready.</p></div>';
-    $$('[data-game-reply]').forEach(btn=>btn.addEventListener('click',async()=>{
-      const gameId=btn.dataset.gameReply;
-      const choice=btn.dataset.choice;
-      $$('[data-game-reply="'+gameId+'"]').forEach(b=>b.disabled=true);
-      await sendGameReply(gameId,choice);
+    wrap.innerHTML=rows.length?rows.join(''):'<div class="empty-messages"><p class="muted">You matched. Say hello when you’re ready — or play a quick trivia round.</p></div>';
+
+    $$('[data-trivia-reply]').forEach(btn=>btn.addEventListener('click',async()=>{
+      const triviaId=btn.dataset.triviaReply;
+      const choice=Number(btn.dataset.choice);
+      $$('[data-trivia-reply="'+triviaId+'"]').forEach(b=>b.disabled=true);
+      await sendTriviaReply(triviaId,choice);
     }));
+    $$('[data-new-trivia]').forEach(btn=>btn.addEventListener('click',startTriviaRound));
+
     requestAnimationFrame(()=>{wrap.scrollTop=wrap.scrollHeight});
   }catch(err){
     console.error('Chat render failed',err);
@@ -1331,6 +1334,8 @@ async function sendRealTextMessage(text){
 function bindChat(){
   const form=$('#chatForm');if(!form)return;
   const voiceBtn=$('#voiceMemoBtn');
+  const triviaBtn=$('#triviaBtn');
+  if(triviaBtn)triviaBtn.addEventListener('click',()=>{if(activeRealChatMatchId)startTriviaRound();});
   if(voiceBtn)voiceBtn.addEventListener('click',()=>{
     if(activeRealChatMatchId){toggleRealVoiceRecording();return;}
     toggleVoiceRecording();
