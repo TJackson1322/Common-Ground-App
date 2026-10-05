@@ -1,4 +1,4 @@
-console.info('Common Ground build v32 real voice memos');
+console.info('Common Ground build v35 preferences + match messaging');
 const SUPABASE_URL = 'https://rungxwkdmhsuizgzrmss.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dSQAmBPDMFiN7alJVWbagA_NH114i-D';
 let supabaseClient = null;
@@ -85,7 +85,9 @@ function bindForm(){
 }
 function validateBasics(){
   const form=$('#profileForm');
-  for(const el of ['name','age','area','minAge','maxAge']){if(!form.elements[el].value){form.elements[el].reportValidity();return false;}}
+  for(const el of ['name','age','area','gender','religion','minAge','maxAge']){if(!form.elements[el].value){form.elements[el].reportValidity();return false;}}
+  if(!form.querySelector('[name="seekingGender"]:checked')){alert('Choose at least one gender you are interested in.');return false;}
+  if(!form.querySelector('[name="relationshipGoal"]:checked')){alert('Choose at least one thing you are looking for.');return false;}
   if(Number(form.elements.age.value)<18){alert('Common Ground is for adults age 18 and older.');return false;}
   const minAge=Number(form.elements.minAge.value),maxAge=Number(form.elements.maxAge.value);
   if(minAge<18||maxAge<18){alert('Dating age preferences must be 18 or older.');return false;}
@@ -114,8 +116,9 @@ function readStoredProfile(){
 }
 function hasStoredProfile(){ return !!readStoredProfile(); }
 function writeStoredProfile(profile){
-  localStorage.setItem(profileStorageKey(),JSON.stringify(profile));
-  if(!currentUser)writeStoredProfile(profile);
+  const serialized=JSON.stringify(profile);
+  localStorage.setItem(profileStorageKey(),serialized);
+  if(!currentUser)localStorage.setItem('cg_profile',serialized);
 }
 function clearCurrentProfileCache(){ localStorage.removeItem(profileStorageKey()); }
 
@@ -123,6 +126,11 @@ function getProfileFromForm(){
   const fd = new FormData($('#profileForm'));
   const obj = Object.fromEntries(fd.entries());
   obj.age=Number(obj.age);obj.radius=Number(obj.radius);obj.minAge=Number(obj.minAge);obj.maxAge=Number(obj.maxAge);
+  obj.seekingGenders=fd.getAll('seekingGender');
+  obj.goals=fd.getAll('relationshipGoal');
+  obj.goal=obj.goals[0]||'Long-term relationship';
+  delete obj.seekingGender;
+  delete obj.relationshipGoal;
   obj.personality={};personalityTraits.forEach(t=>obj.personality[t.key]=Number(obj[t.key]));
   obj.interests=[...selectedInterests];
   obj.deals={goal:fd.has('dealGoal'),smoking:fd.has('dealSmoking'),vaping:fd.has('dealVaping'),alcohol:fd.has('dealAlcohol'),cannabis:fd.has('dealCannabis')};
@@ -147,7 +155,11 @@ async function saveProfile(){
 function restoreProfile(){
   const raw=readStoredProfile();if(!raw)return;
   const p=JSON.parse(raw),f=$('#profileForm');
-  Object.entries(p).forEach(([k,v])=>{if(['personality','interests','deals'].includes(k))return;if(f.elements[k])f.elements[k].value=v});
+  Object.entries(p).forEach(([k,v])=>{if(['personality','interests','deals','goals','seekingGenders'].includes(k))return;if(f.elements[k]&&typeof v!=='object')f.elements[k].value=v});
+  const savedGoals=(Array.isArray(p.goals)&&p.goals.length)?p.goals:[p.goal].filter(Boolean);
+  $('[name="relationshipGoal"]').forEach(el=>el.checked=savedGoals.includes(el.value));
+  const savedSeeking=Array.isArray(p.seekingGenders)?p.seekingGenders:[];
+  $('[name="seekingGender"]').forEach(el=>el.checked=savedSeeking.includes(el.value));
   personalityTraits.forEach(t=>{if(p.personality?.[t.key]!==undefined){f.elements[t.key].value=p.personality[t.key];$(`#${t.key}Value`).textContent=p.personality[t.key];}});
   selectedInterests=new Set(p.interests||[]);$$('[data-interest]').forEach(b=>b.classList.toggle('selected',selectedInterests.has(b.dataset.interest)));
   if(p.deals){[['dealGoal','goal'],['dealSmoking','smoking'],['dealVaping','vaping'],['dealAlcohol','alcohol'],['dealCannabis','cannabis']].forEach(([el,key])=>{f.elements[el].checked=!!p.deals[key]});}
@@ -197,7 +209,7 @@ function updateAuthUI(){
     if(loggedOut)loggedOut.classList.add('hidden');
     if(loggedIn)loggedIn.classList.remove('hidden');
     if(accountEmail)accountEmail.textContent=currentUser.email||'Signed in';
-    const p=localStorage.getItem('cg_profile');
+    const p=readStoredProfile();
     if(verificationText && p){
       try{verificationText.textContent=JSON.parse(p).verifiedNameAge?'Name & age verified.':'Optional. Your name and age are not verified yet.';}catch(_e){}
     }
@@ -242,7 +254,11 @@ function profileToDb(p,userId){
     dating_radius:Number(p.radius)||25,
     min_age:Number(p.minAge)||18,
     max_age:Number(p.maxAge)||99,
-    relationship_goal:p.goal||null,
+    gender:p.gender||null,
+    seeking_genders:p.seekingGenders||[],
+    religion:p.religion||null,
+    relationship_goals:(p.goals&&p.goals.length)?p.goals:[p.goal].filter(Boolean),
+    relationship_goal:(p.goals&&p.goals.length?p.goals[0]:p.goal)||null,
     bio:p.bio||null,
     conflict_style:p.conflict||null,
     social_energy:p.social||null,
@@ -275,7 +291,9 @@ function profileToDb(p,userId){
 function dbToProfile(r){
   return {
     name:r.first_name||'',age:r.age||18,area:r.area||'',radius:r.dating_radius||25,minAge:r.min_age||18,maxAge:r.max_age||99,
-    goal:r.relationship_goal||'Long-term relationship',bio:r.bio||'',conflict:r.conflict_style||'Take some space, then talk',social:r.social_energy||'Balanced',planning:r.planning_style||'Plan the important things',children:r.children_preference||'I am open either way',
+    gender:r.gender||'',seekingGenders:r.seeking_genders||[],religion:r.religion||'Prefer not to say',
+    goals:(r.relationship_goals&&r.relationship_goals.length)?r.relationship_goals:[r.relationship_goal||'Long-term relationship'],
+    goal:(r.relationship_goals&&r.relationship_goals.length?r.relationship_goals[0]:r.relationship_goal)||'Long-term relationship',bio:r.bio||'',conflict:r.conflict_style||'Take some space, then talk',social:r.social_energy||'Balanced',planning:r.planning_style||'Plan the important things',children:r.children_preference||'I am open either way',
     alcohol:r.alcohol||'Never',nicotine:r.smoking||'Never',vaping:r.vaping||'Never',cannabis:r.cannabis||'Never',alcoholFree:r.alcohol_free||'No preference',dateDrinker:r.date_drinker||'Sometimes / depends',dateSmoker:r.date_smoker||'Sometimes / depends',dateVaper:r.date_vaper||'Sometimes / depends',dateCannabis:r.date_cannabis||'Sometimes / depends',dateSober:r.date_sober||'No preference',
     interests:r.interests||[],verifiedNameAge:!!r.name_age_verified,
     personality:{openness:r.openness??50,conscientiousness:r.conscientiousness??50,extraversion:r.extraversion??50,agreeableness:r.agreeableness??50,emotionalStability:r.emotional_stability??50},
@@ -297,11 +315,24 @@ function getUserProfile(){
   return {name:'You',age:30,area:'your area',radius:25,minAge:25,maxAge:40,goal:'Long-term relationship',conflict:'Take some space, then talk',social:'Balanced',planning:'Plan the important things',children:'I have children',alcohol:'Occasionally',nicotine:'Never',vaping:'Never',cannabis:'Never',dateDrinker:'Sometimes / depends',dateSmoker:'No',dateSober:'No preference',dateCannabis:'Sometimes / depends',interests:['Family time','Movies','Restaurants','Outdoors','Technology'],personality:{openness:70,conscientiousness:74,extraversion:50,agreeableness:78,emotionalStability:68},deals:{goal:true,smoking:false,vaping:false,alcohol:false,cannabis:false}};
 }
 
+function goalList(p){
+  if(Array.isArray(p?.goals)&&p.goals.length)return p.goals;
+  if(Array.isArray(p))return p;
+  if(typeof p==='string')return [p];
+  return p?.goal?[p.goal]:[];
+}
+function genderPreferenceAllows(person,candidate){
+  const wanted=Array.isArray(person?.seekingGenders)?person.seekingGenders:[];
+  if(!wanted.length||wanted.includes('Any gender')||!candidate?.gender)return true;
+  const label=candidate.gender==='Woman'?'Women':candidate.gender==='Man'?'Men':candidate.gender==='Nonbinary'?'Nonbinary':candidate.gender;
+  return wanted.includes(label);
+}
 function hardConflict(u,m){
   const minAge=Number(u.minAge??18),maxAge=Number(u.maxAge??99);
   if(Number(m.age)<minAge || Number(m.age)>maxAge) return `Outside your preferred age range (${minAge}–${maxAge})`;
   if(m.realUser && Number(u.age) && (Number(u.age)<Number(m.minAge??18) || Number(u.age)>Number(m.maxAge??99))) return 'You are outside this person’s preferred age range';
-  if(u.deals?.goal && !goalCompatible(u.goal,m.goal)) return 'Different relationship goals';
+  if(m.realUser && (!genderPreferenceAllows(u,m) || !genderPreferenceAllows(m,u))) return 'Gender preferences do not line up';
+  if(u.deals?.goal && !goalCompatible(goalList(u),goalList(m))) return 'Different relationship goals';
   if(u.deals?.smoking && m.nicotine==='Regularly') return 'Regular cigarette smoking is one of your deal-breakers';
   if(u.deals?.vaping && (m.vaping??'Never')==='Regularly') return 'Regular vaping is one of your deal-breakers';
   if(u.deals?.alcohol && m.alcohol==='Regularly') return 'Regular drinking is one of your deal-breakers';
@@ -314,13 +345,15 @@ function hardConflict(u,m){
   return null;
 }
 function goalCompatible(a,b){
-  if(a===b)return true;
+  const aa=goalList(a),bb=goalList(b);
+  if(aa.some(x=>bb.includes(x)))return true;
   const serious=['Long-term relationship','Marriage-minded'];
-  return serious.includes(a)&&serious.includes(b) || (a==='Dating and seeing where it goes'&&b==='Long-term relationship') || (b==='Dating and seeing where it goes'&&a==='Long-term relationship');
+  if(aa.some(x=>serious.includes(x))&&bb.some(x=>serious.includes(x)))return true;
+  return (aa.includes('Dating and seeing where it goes')&&bb.includes('Long-term relationship')) || (bb.includes('Dating and seeing where it goes')&&aa.includes('Long-term relationship'));
 }
 function calcMatch(u,m){
   const conflict=hardConflict(u,m);if(conflict)return {blocked:true,conflict,score:0};
-  const goal=goalCompatible(u.goal,m.goal)?100:45;
+  const goal=goalCompatible(goalList(u),goalList(m))?100:45;
   const lifestyle=lifestyleScore(u,m);
   const personality=personalityScore(u,m);
   const hobby=interestScore(u,m);
@@ -348,7 +381,7 @@ function personalityScore(u,m){
 function interestScore(u,m){const a=new Set(u.interests||[]),shared=m.interests.filter(i=>a.has(i)).length;return Math.min(100,35+shared*13)}
 function reasons(u,m,result){
   const r=[];
-  if(goalCompatible(u.goal,m.goal))r.push('Your relationship goals line up.');
+  if(goalCompatible(goalList(u),goalList(m)))r.push('Your relationship goals line up.');
   const shared=m.interests.filter(i=>(u.interests||[]).includes(i));if(shared.length)r.push(`${shared.length} shared interest${shared.length>1?'s':''}: ${shared.slice(0,3).join(', ')}${shared.length>3?'…':''}`);
   if(u.conflict===m.conflict)r.push('You prefer a similar conflict/communication pace.');
   if(u.social===m.social)r.push('Your social-energy preferences are similar.');
